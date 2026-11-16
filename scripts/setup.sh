@@ -38,4 +38,4 @@ fi
 "$SITL_VENV_PYTHON" -c 'import sys; assert sys.version_info[:2] == (3, 12), ".venvはPython 3.12で作成してください"'
 "$SITL_VENV_PYTHON" -m pip install --no-deps -r "$SITL_ROOT/requirements-cli.txt"
 "$SITL_VENV_PYTHON" -c 'import em, lxml, pymavlink, MAVProxy, pexpect, numpy, psutil, serial, defusedxml, pynmeagps; print("CLI依存の読み込み: OK")'
-echo 'セットアップ完了。次は ./scripts/build.sh を実行してください。'
+echo 'セットアップ完了。次は ./scripts/prepare-prototype.sh を実行してください。'

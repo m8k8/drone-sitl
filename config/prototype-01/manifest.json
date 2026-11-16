@@ -10,10 +10,10 @@
   "source_bom": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
   "components": "components.json",
   "mass_properties": "mass-properties.json",
-  "propulsion_source_model": "../g06/models/payload-0l.json",
-  "propulsion_source_sha256": "824965203ff4c5ec1f73892280daf9f94d40344c79a88edb2a9f02c909e5a74d",
-  "calibration": "../g06/calibration.json",
-  "reference_mass_patch": "../g06/reference-mass.patch",
+  "propulsion_parameters": "propulsion.json",
+  "propulsion_parameters_sha256": "bd200af04de5a5870d1e8fc0fadb645fe9972793d5865da32f5536f14a5a1037",
+  "calibration": "calibration.json",
+  "reference_mass_patch": "reference-mass.patch",
   "patch_sha256": "56d9bd28677a0e723cf01340a9f93b0e39d136a04a3bdf37f9dba1adf5619cfb",
   "patch_files": {
     "libraries/SITL/SIM_Frame.h": {
@@ -43,7 +43,7 @@
     "noise_setting_m": 0.02,
     "noise_status": "assumed native uniform random addition, not identified TF02-Pro noise"
   },
-  "geometry_assumption": "Same1172mm squareX approximation as experiment002; motor leverarms translated to assumedCG",
+  "geometry_assumption": "1172mm squareX approximation; motor leverarms translated to assumedCG",
   "propulsion_calibration_unchanged": true,
   "cases": [
     {
@@ -111,7 +111,7 @@
   "limitations": [
     "Frame5400g scope unresolved; additionalweights include allowances; nominal mass not measurementor bound",
     "All installationpositions are assumptions; geometry,CG,inertia andbatterytray strength unmeasured",
-    "Fixed oldlinear power/thrust fit andassumed0.06ohm packresistance remain; no endurancevalidation",
+    "Fixed linear power/thrust fit and assumed0.06ohm packresistance; no endurancevalidation",
     "Native batterycurrent sums motors only; camera,radio,FC,sensorsandDC-DC consumption not added",
     "Genericgroundcontact0.1m,diagonal inertiaonly; no structurecollisionor flexibility",
     "No tank,water,sprayer,RTK,AIimageprocessingor obstacleavoidance"

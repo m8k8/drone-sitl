@@ -8,7 +8,6 @@ import math
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-G06 = HERE.parent / "g06"
 NOMINAL_MASS_G = 12338.7
 REFERENCE_MASS_KG = 13.4946
 WHEELBASE_M = 1.172
@@ -140,22 +139,23 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    base_path = G06/"models/payload-0l.json"
-    base = json.loads(base_path.read_text())
-    legacy = json.loads((G06/"manifest.json").read_text())
+    propulsion_path = HERE/"propulsion.json"
+    propulsion = json.loads(propulsion_path.read_text())
+    base = propulsion["model_parameters"]
+    geometry_fields = {"mass", "moment_inertia", *(f"motor{i}_position" for i in range(1,5))}
+    assert not geometry_fields.intersection(base), "Propulsion input must not contain another aircraft model"
     assert base["referenceMass"] == REFERENCE_MASS_KG
     bom = make_bom()
     outputs = {"components.json": render_json(bom)}
     cases, physical = [], []
-    fixed_fields = set(base) - {"mass", "moment_inertia", *(f"motor{i}_position" for i in range(1,5))}
+    fixed_fields = set(base)
     for label, delta in [("nominal",0.0),("mass-low",-.5),("mass-high",.5)]:
         elements = mass_elements(bom, delta)
         props = properties(elements)
-        model = copy.deepcopy(base)
-        model["mass"] = props["mass_kg"]
-        model["moment_inertia"] = props["native_diagonal_inertia_kg_m2"]
+        model = {"mass": props["mass_kg"], **copy.deepcopy(base)}
         for i, p in enumerate(props["native_motor_positions_from_cg_m"],1):
             model[f"motor{i}_position"] = p
+        model["moment_inertia"] = props["native_diagonal_inertia_kg_m2"]
         assert all(model[k] == base[k] for k in fixed_fields), "Propulsion/drag calibration changed"
         assert math.isclose(model["mass"], NOMINAL_MASS_G/1000 + delta, abs_tol=1e-8)
         path = f"models/{label}.json"
@@ -175,18 +175,18 @@ def main():
     })
     outputs["manifest.json"] = render_json({
         "model_status":"B-D prototype provisional physics and sensor model, not a validated real-aircraft digital twin",
-        "upstream_commit":legacy["upstream_commit"], "frame":"X", "defaults":"defaults.parm",
+        "upstream_commit":propulsion["upstream_commit"], "frame":"X", "defaults":"defaults.parm",
         "empty_mass_kg":round(NOMINAL_MASS_G/1000,7), "nominal_mass_kg":round(NOMINAL_MASS_G/1000,7),
         "reference_mass_kg":REFERENCE_MASS_KG, "source_docs_commit":DOCS_COMMIT,
         "source_bom":DOCS_URL, "components":"components.json", "mass_properties":"mass-properties.json",
-        "propulsion_source_model":"../g06/models/payload-0l.json", "propulsion_source_sha256":sha256(base_path),
-        "calibration":"../g06/calibration.json", "reference_mass_patch":"../g06/reference-mass.patch",
-        "patch_sha256":legacy["patch_sha256"], "patch_files":legacy["patch_files"],
+        "propulsion_parameters":"propulsion.json", "propulsion_parameters_sha256":sha256(propulsion_path),
+        "calibration":"calibration.json", "reference_mass_patch":"reference-mass.patch",
+        "patch_sha256":propulsion["patch_sha256"], "patch_files":propulsion["patch_files"],
         "launch_args":["--serial5=sim:benewake_tf03"],
         "rangefinder":{"product_intent":"TF02-Pro UART", "native_serial_emulator":"benewake_tf03", "driver_type":27,
                        "reading_rate_hz":5,"virtual_position_from_cg_m":[0,0,0],"distance_min_m":.1,"distance_max_m":13.5,
                        "noise_setting_m":.02,"noise_status":"assumed native uniform random addition, not identified TF02-Pro noise"},
-        "geometry_assumption":"Same1172mm squareX approximation as experiment002; motor leverarms translated to assumedCG",
+        "geometry_assumption":"1172mm squareX approximation; motor leverarms translated to assumedCG",
         "propulsion_calibration_unchanged":True, "cases":cases,
         "functional_coverage":{
             "ArduCopter":"actual compiled controller running onhost; Pixhawk CPU/powerhardware notemulated",
@@ -201,7 +201,7 @@ def main():
         "limitations":[
             "Frame5400g scope unresolved; additionalweights include allowances; nominal mass not measurementor bound",
             "All installationpositions are assumptions; geometry,CG,inertia andbatterytray strength unmeasured",
-            "Fixed oldlinear power/thrust fit andassumed0.06ohm packresistance remain; no endurancevalidation",
+            "Fixed linear power/thrust fit and assumed0.06ohm packresistance; no endurancevalidation",
             "Native batterycurrent sums motors only; camera,radio,FC,sensorsandDC-DC consumption not added",
             "Genericgroundcontact0.1m,diagonal inertiaonly; no structurecollisionor flexibility",
             "No tank,water,sprayer,RTK,AIimageprocessingor obstacleavoidance",

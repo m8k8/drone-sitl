@@ -1,27 +1,80 @@
-# ドローン制御のSITL練習環境
+# 第１弾B〜DのドローンSITL環境
 
-ArduPilotをMac上で動かし、実機なしで離陸・位置保持・帰還を練習する専用プロジェクトです。最初は標準のクアッドコプターとMAVProxyの文字入力画面を使います。
+第１弾の搭載部品表を使うArduPilot SITL専用プロジェクトです。基準重量は電池込み**12.3387kg**。G06、X6 Plus G2×4、12S 10Ah、Pixhawk、M10、下向きTF02-Proなどを想定しています。
 
-標準機での操作練習に加え、公表仕様と仮定を使ったG06モデル、第１弾（B〜D）の部品表に基づくモデルを選べます。実機の実測校正や散布装置の再現はまだ行っていません。
+現在の機体設定は[`config/prototype-01/`](config/prototype-01/README.md)に集約しています。標準3kg機と旧積載比較の独自コード・設定・結果は削除しました。±0.5kgの2ケースは、同じB〜D機体の重量感度を確認するために残しています。
 
-実行・可視化・テスト結果の詳しい資料は、独立した[drone-docsの実験一覧](https://github.com/m8k8/drone-docs/blob/main/sitl/README.md)にまとめています。
+このモデルは購入前の設計値と仮の部品配置に基づきます。FPV映像、G12の無線伝搬、Remote ID送信、実配線・端子の発熱は再現していません。[モデルの再現範囲と実験結果](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/003-prototype-bd/README.md)を参照してください。
 
-## 実験を選ぶ
+## 1. セットアップとモデルの準備
 
-| 実験 | モデルと目的 | 実行方法 |
-| --- | --- | --- |
-| [001：標準quad](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/001-standard-quad/README.md) | 3kgの汎用機で環境・基本操作を確認 | 以下の`run.sh`、`smoke-test.sh` |
-| [002：G06暫定モデルの積載比較](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/002-g06-payload/README.md) | 公表仕様と仮定から作った機体で、水0・1・3・5Lを比較 | `prepare-g06.sh`、`payload-suite.sh` |
-| [003：第１弾B〜D](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/003-prototype-bd/README.md) | 部品表の12.3387kg、仮の重心・慣性、AUTO航路、下向き測距 | `prepare-prototype.sh`、`prototype-suite.sh` |
-
-第１弾B〜Dを試す場合は、初回セットアップ後に以下を実行します。通常のアームチェックを通して、基本飛行・AUTO航路・測距の偏りと範囲外からの復帰を各3回、±0.5kgの基本飛行を各1回、計11回試験します。
+macOS / Apple Silicon、Xcode Command Line Tools、Python 3.12を使用します。別のMacで初めて準備する場合は、親ディレクトリで次を実行します。
 
 ```bash
+git clone https://github.com/m8k8/drone-sitl.git sitl
+cd sitl
+./scripts/setup.sh
 ./scripts/prepare-prototype.sh
-./scripts/prototype-suite.sh --repeats 3
 ```
 
-1種類ずつ確認する場合は、次のいずれかを使います。結果は毎回、新しい`runs/prototype-*`へ保存します。`--output`で保存先を指定した場合、既存ディレクトリへの上書きは拒否します。
+既存の`sitl`と`.venv`がある場合はcloneとsetupを省略できます。Pythonが未導入なら`brew install python@3.12`、開発ツールがなければ`xcode-select --install`で準備します。
+
+ArduPilotはCopter 4.7.2、コミット`fb773567896014da007bca58358704d4a0d8516f`に固定しています。`prepare-prototype.sh`は生成ファイルの整合性と既知パッチのハッシュを確認し、推進校正用質量を実際の機体質量から分離する変更を適用してビルドします。`build.sh`単独ではこの準備を行いません。
+
+Python依存は専用`.venv`へ導入します。MAVProxyは1.8.75のCLIを使用し、GUI用依存は含めません。
+
+## 2. 手動で操作する
+
+`drone`からは先に`cd sitl`を実行します。
+
+```bash
+./scripts/run.sh
+```
+
+**このコマンドもB〜Dの12.3387kg機を起動します。** MAVProxyの文字入力画面で操作します。起動だけでアームや離陸は行いません。
+
+初期化後、MAVProxyへ順番に入力します。以下はmacOSのシェル用コマンドではありません。
+
+```text
+mode GUIDED
+arm throttle
+```
+
+`ARMED`を確認してから、10秒以内に離陸を指示します。
+
+```text
+takeoff 10
+```
+
+高度が約10mで安定したら、スロットルを中立にして位置保持へ切り替えます。
+
+```text
+rc 3 1500
+mode LOITER
+status GLOBAL_POSITION_INT
+```
+
+`relative_alt`はmm単位です。約`10000`なら相対高度10mです。今回のLOITERは下向き測距による地表追従も有効です。
+
+帰還・着陸させます。
+
+```text
+mode RTL
+```
+
+`DISARMED`を確認後、`Ctrl+C`で終了します。起動したSITLとMAVProxyだけを終了し、他のインスタンスへ停止命令を送りません。アームが拒否された場合はPreArmの理由を確認し、チェックを無効化せず初期化を待ちます。
+
+保存先は`runs/prototype-manual/`です。通常起動は保存パラメータを引き継ぎます。初期状態に戻すにはSITLを停止してから次を実行します。
+
+```bash
+./scripts/run.sh --reset
+```
+
+`--reset`は`eeprom.bin`だけを初期化し、機体BINログを削除しません。モデル・既定パラメータが変わった場合は、設定の混在を防ぐためリセットを要求します。
+
+手動起動はinstance 41（TCP 6170、RC入力UDP 5911）、自動試験はinstance 40を使用します。使用中ポートへ勝手に接続しません。手動起動のMAVProxyはUDP 14550へ転送するためQGroundControlへ接続できますが、QGCのGUI表示は未検証です。[可視化ガイド](https://github.com/m8k8/drone-docs/blob/main/sitl/guides/visualization.md)
+
+## 3. 自動で試験する
 
 ```bash
 ./scripts/prototype-test.sh --scenario flight
@@ -29,211 +82,51 @@ ArduPilotをMac上で動かし、実機なしで離陸・位置保持・帰還�
 ./scripts/prototype-test.sh --scenario rangefinder
 ```
 
-部品ごとの重量・仮配置は[`config/prototype-01/`](config/prototype-01/README.md)、再現する機能と限界は[実験003のモデル説明](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/003-prototype-bd/model.md)を参照してください。FPV映像やG12の無線を再現した試験ではありません。結果表は`./.venv/bin/python scripts/summarize_prototype.py runs/実行したsuite名`で表示できます。
+| 試験 | 内容 |
+| --- | --- |
+| `flight` | 通常アーム、10m離陸、LOITER、北20m移動、RTL着陸・通常ディスアーム |
+| `mission` | 高度10mで20m四方のAUTO航路、4地点到達、ミッション内RTL |
+| `rangefinder` | 正常測距、1mの合成偏りへの応答、範囲外値での高度維持、測距復旧 |
 
-軌跡と測距応答の図を作る場合は、任意の描画用環境を追加します。以下の`suite名`を実際の保存先に置き換えてください。描画スクリプトは、全件成功したsuiteのAUTO試験3回と測距試験の1回目を使い、SVGとPNGを生成します。
+全11件（上記各3回と±0.5kgの基本飛行各1回）を実行する場合は次を使います。
+
+```bash
+./scripts/prototype-suite.sh --repeats 3
+```
+
+各回は新しい保存状態で起動し、設定・コードのコピー、ハッシュ、判定結果、CSV、BINログを新しい`runs/prototype-*`へ保存します。`--output`で既存ディレクトリを指定した場合は上書きを拒否します。終了コード0が成功です。
+
+2026-11-16の本試験は11/11成功し、`runs/prototype-final-20261116/`に保持しています。成功は記録したモデル・判定条件に対するもので、実機性能の保証ではありません。[試験条件と結果](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/003-prototype-bd/README.md)
+
+## 4. 保存した結果を見る
+
+```bash
+.venv/bin/python scripts/summarize_prototype.py runs/prototype-final-20261116
+```
+
+図を再生成する場合だけ、任意の描画用環境を追加します。
 
 ```bash
 .venv/bin/python -m venv .cache/plots-venv
 .cache/plots-venv/bin/python -m pip install -r requirements-plots.txt
-.cache/plots-venv/bin/python scripts/plot_prototype.py runs/suite名 --output runs/suite名/figures
+.cache/plots-venv/bin/python scripts/plot_prototype.py runs/prototype-final-20261116 \
+  --output runs/prototype-final-20261116/figures
 ```
 
-実験002は初回セットアップ後、次の順に実行します。`prepare-g06.sh`は固定版ArduPilotへ同梱の小さなパッチを適用して再ビルドします。機体重量を変えてもモーターの推力が自動的に増えないよう、推進系の校正に使う質量を分離する変更です。
-
-```bash
-./scripts/prepare-g06.sh
-./scripts/payload-suite.sh --repeats 3
-```
-
-各条件の結果・設定・時系列は新しい`runs/g06-payload-*/`に保存します。途中の試験が失敗しても他の条件を続け、全件の成否を記録します。初回に短く動作確認する場合は`./scripts/payload-suite.sh --payloads 0 --repeats 1`を使います。
-
-空荷13.4946kgは未確定部品の仮枠を含む計算上のシナリオです。G06の実測重量や飛行性能を保証するモデルではありません。試験条件・根拠・未検証範囲は[実験002のモデル説明](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/002-g06-payload/model.md)を参照してください。
-
-`run.sh`の対話起動は引き続き実験001の標準3kg機です。実験002・003の自動試験は専用インスタンスを使用し、既存の対話起動や実機へ接続しません。
-
-**セットアップとビルドが済んでいる環境では**、`drone`ディレクトリから以下で起動し、「4. 最初の離陸・位置保持・帰還」へ進めます。新しくcloneした場合は「1. セットアップとビルド」から実行してください。
-
-```bash
-cd sitl
-./scripts/run.sh
-```
-
-## 使用する構成
-
-- macOS / Apple Silicon、Xcode Command Line Tools
-- HomebrewのPython 3.12と、このディレクトリ専用の`.venv`
-- ArduPilot `Copter-4.7.2`
-- 固定コミット：`fb773567896014da007bca58358704d4a0d8516f`
-- SITL標準quad、MAVProxy 1.8.75 CLI。地図や3D画面は初期構成に含みません。
-
-`requirements-cli.txt`にCLI用のPython依存を固定し、`--no-deps`でその一式を導入します。MAVProxyのGUI・3D用依存は除外しています。
-
-初回はソースとPythonパッケージを取得するため、インターネット接続が必要です。
-
-## 1. セットアップとビルド
-
-別のMacなどで初めて準備する場合の手順です。以下は**macOSのターミナル（シェル）**へ入力します。`drone`ディレクトリを開いた状態から始めてください。
-
-```bash
-git clone https://github.com/m8k8/drone-sitl.git sitl
-cd sitl
-./scripts/setup.sh
-./scripts/build.sh
-```
-
-既存の`sitl`がある場合はcloneを省略します。
-
-セットアップはArduPilotの取得とPython環境の準備、ビルドはMac用SITL実行ファイルの生成を行います。初回のビルドには時間がかかります。エラーが出たら、その手順の出力を確認してから次へ進んでください。
-
-Pythonや開発ツールが見つからない場合は、先に次のコマンドで場所・バージョンを確認します。
-
-```bash
-xcode-select -p
-/opt/homebrew/opt/python@3.12/bin/python3.12 --version
-```
-
-未導入の場合は`xcode-select --install`でCommand Line Tools、`brew install python@3.12`でPythonを導入します。
-
-## 2. 自動の動作確認
-
-対話操作の前に、シェルで次を実行します。
-
-```bash
-./scripts/smoke-test.sh
-```
-
-このスクリプトは専用のSITLを起動し、通信の受信、GUIDEDへの変更、アーム、10m離陸、LOITER、RTL、着陸後のディスアームを順に確認します。途中の失敗・タイムアウトは成功扱いにしません。終了コード0が成功です。
-
-各回の記録は`runs/smoke-*/`に保存します。`sitl.log`が機体の起動・動作ログ、`summary.json`が確認結果です。
-
-2026-11-16に、このMac（Apple Silicon、Python 3.12.12、Apple clang 17）でセットアップ、ビルド、自動テストを確認しました。通常のアーム判定を通過し、10m離陸、LOITERの高度・位置保持、RTL着陸と自動ディスアームに成功しています。
-
-このテストの目的は起動環境と基本操作の確認です。AUTO航路、通信断、散布制御、G06の性能を検証したことにはなりません。
-
-## 3. SITLを起動する
-
-シェルで実行します。
-
-```bash
-./scripts/run.sh
-```
-
-起動後はMAVProxyの入力画面になります。`STABILIZE>`などの表示が入力位置の目印です。通信やGPS・姿勢推定の初期化メッセージが流れるので、初期化が済むまで待ちます。
-
-起動直後に一度だけ`Connection refused sleeping`が出ることがあります。SITL本体の準備を待つ再接続です。その後に`Detected vehicle`や`ArduPilot Ready`が出れば接続できています。繰り返したまま接続できない場合は`/tmp/ArduCopter.log`を確認してください。
-
-ここから先の`mode`、`arm`、`takeoff`は**MAVProxyへ入力するコマンド**です。macOSのシェルには入力しません。説明中の`GUIDED>`などのプロンプトは入力不要です。
-
-## 4. 最初の離陸・位置保持・帰還
-
-### 離陸する
-
-MAVProxyで、まずGUIDEDへ変更します。
-
-```text
-mode GUIDED
-```
-
-GUIDEDへ切り替わったら、アームします。
-
-```text
-arm throttle
-```
-
-`ARMED`の通知を確認し、その後10秒以内に次を入力します。2つのコマンドは一括送信せず、アーム完了を見てから離陸を指示します。長く待つと自動でディスアームされることがあります。
-
-```text
-takeoff 10
-```
-
-アームが拒否された場合は、表示された`PreArm`メッセージを確認します。GPSや姿勢推定の準備中なら待ってから再実行してください。チェックを無効化して進める必要はありません。
-
-### 高度と位置保持を確認する
-
-```text
-status GLOBAL_POSITION_INT
-```
-
-`relative_alt`は相対高度のミリメートル値です。約`10000`なら、基準高度から約10m上にいます。値は一度だけ表示されるので、必要に応じて再入力します。
-
-高度が安定したら、仮想送信機のスロットルを中立の1500にしてから位置保持へ切り替えます。LOITERではスロットル入力が上昇・下降指示になるため、中立にして高度を保ちます。
-
-```text
-rc 3 1500
-mode LOITER
-```
-
-モードがLOITERになり、しばらく待っても高度が大きく変わらないことを確認します。
-
-### 帰還・着陸する
-
-```text
-mode RTL
-```
-
-離陸地点へ帰還し、着陸するまで待ちます。RTL設定によっては一度高度を上げてから帰還します。今回の練習では離陸地点の上空にいるため、水平移動がほとんど見られない場合があります。
-
-着陸後に`DISARMED`の通知を確認できれば、この練習は完了です。途中でその場へ着陸させたい場合は、MAVProxyで`mode LAND`を入力します。
-
-### 終了する
-
-ターミナルで`Ctrl+C`を押して停止し、macOSのシェルへ戻ります。
-
-| 記録 | 保存先 |
-| --- | --- |
-| パラメータ・実行状態 | `runs/default/` |
-| 機体の`.BIN`ログ | `runs/default/logs/` |
-| MAVProxyの通信ログ | `runs/default/mav.tlog` |
-| SITLの起動メッセージ | `/tmp/ArduCopter.log` |
-
-起動には公式の`sim_vehicle.py`を使います。そのheadless起動の仕様により、起動メッセージだけは`/tmp/ArduCopter.log`へ保存され、次回起動時に上書きされます。
-
-## 5. 設定を初期化して再実行する
-
-通常の起動では前回保存したパラメータが使われます。練習を初期状態からやり直す場合は、SITLを停止してからシェルで実行します。
-
-```bash
-./scripts/run.sh --reset
-```
-
-`--reset`は保存パラメータを初期化する指定です。自分で変更した設定を残したい場合は、通常の`./scripts/run.sh`を使います。
+全件成功したsuiteのAUTO試験3回と測距試験1回目から、軌跡・高度・距離のSVGとPNGを生成します。FPV映像ではありません。公開済みの図は[実験003](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/003-prototype-bd/README.md)にあります。
 
 ## ディレクトリ構成
 
 ```text
 sitl/
-├── README.md
-├── requirements-cli.txt  CLI用Python依存の固定バージョン
-├── scripts/          セットアップ・ビルド・起動・動作確認
-├── config/           バージョンやシミュレーションの設定
-├── vendor/           取得したArduPilotソース（Git管理対象外）
-├── .venv/            Python環境（Git管理対象外）
-└── runs/             実行状態・パラメータ・ログ（Git管理対象外）
+├── config/prototype-01/  B〜Dの部品表・モデル・校正・パッチ
+├── config/versions.env   ArduPilotの固定版
+├── scripts/             準備・手動起動・自動試験・可視化
+├── requirements-cli.txt
+├── requirements-plots.txt
+├── vendor/              ArduPilot依存ソース（Git管理対象外）
+├── .venv/               実行用Python（Git管理対象外）
+└── runs/                B〜Dの設定状態・実行記録（Git管理対象外）
 ```
 
-最初の練習が終わったら、短いAUTO航路、速度・高度制限、通信断時の動作を一つずつ追加します。手順と期待する結果を記録し、ログで確認していきます。
-
-## リポジトリの管理
-
-公開対象は、この`sitl`プロジェクトのスクリプト・設定・手順書です。`.gitignore`によって、取得したArduPilot本体、Python環境、実行ログを除外します。`drone`内の他の資料はこのプロジェクトへ追加しません。
-
-実行コードは[drone-sitl](https://github.com/m8k8/drone-sitl)、資料は[drone-docs](https://github.com/m8k8/drone-docs)で別々に管理します。変更時は追加対象を確認してコミットします。
-
-```bash
-git status --short
-git add .
-git diff --cached --stat
-git commit -m "Describe the change"
-```
-
-ArduPilotやPythonパッケージのライセンスは各配布元に従います。このプロジェクトはそれらのソースや配布物をGitへ複製せず、セットアップ時に取得します。
-
-## 公式資料
-
-- [ArduPilot Copter 4.7.2 リリース](https://github.com/ArduPilot/ardupilot/releases/tag/Copter-4.7.2)
-- [macOSのビルド環境](https://ardupilot.org/dev/docs/building-setup-mac.html)
-- [4.7.2のmacOS依存関係スクリプト](https://github.com/ArduPilot/ardupilot/blob/Copter-4.7.2/Tools/environment_install/install-prereqs-mac.sh)
-- [SITLの使い方・設定と保存状態](https://ardupilot.org/dev/docs/using-sitl-for-ardupilot-testing.html)
-- [Copter / MAVProxy チュートリアル](https://ardupilot.org/dev/docs/copter-sitl-mavproxy-tutorial.html)
-- [MAVLink GLOBAL_POSITION_INTの単位](https://mavlink.io/en/messages/common.html#GLOBAL_POSITION_INT)
+実行コードは[drone-sitl](https://github.com/m8k8/drone-sitl)、部品選定と実験資料は[drone-docs](https://github.com/m8k8/drone-docs)で別々に管理します。生ログ、依存環境、元の購入計画Excelは公開対象に含めません。

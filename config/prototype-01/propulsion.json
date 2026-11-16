@@ -1,0 +1,42 @@
+{
+  "description": "Fixed propulsion, drag, battery, and nominal frame constants for the B-D prototype; this is not a runnable aircraft model.",
+  "reference_mass_note": "referenceMass=13.4946kg preserves propulsion calibration; actual B-D mass is generated separately from the BOM.",
+  "source_implementation_commit": "b114b11a92de9dace9dc0cbf7043cd659ed3a8e1",
+  "source_nominal_model_sha256": "c87861cfd45aa5b16f56a361f779505873116e8aeab3cac540c63adc266249ca",
+  "upstream_commit": "fb773567896014da007bca58358704d4a0d8516f",
+  "model_parameters": {
+    "referenceMass": 13.4946,
+    "diagonal_size": 0.586,
+    "refSpd": 10.0,
+    "refAngle": 10.0,
+    "refVoltage": 46.0,
+    "refCurrent": 30.199323765301816,
+    "refAlt": 0.0,
+    "refTempC": 25.0,
+    "refBatRes": 0.06,
+    "maxVoltage": 50.4,
+    "battCapacityAh": 10.0,
+    "hoverThrOut": 0.22435833466389915,
+    "propExpo": 0,
+    "refRotRate": 120.0,
+    "pwmMin": 1050.0,
+    "pwmMax": 1950.0,
+    "spin_min": 0.224,
+    "spin_max": 1.0,
+    "slew_max": 20.0,
+    "disc_area": 1.1674540318406348,
+    "mdrag_coef": 0.2,
+    "num_motors": 4.0
+  },
+  "patch_sha256": "56d9bd28677a0e723cf01340a9f93b0e39d136a04a3bdf37f9dba1adf5619cfb",
+  "patch_files": {
+    "libraries/SITL/SIM_Frame.h": {
+      "original_sha256": "d202efdbf3fd91ab42af2727a0f8458e4e508b25fd6b312d77f478ae424fa9be",
+      "patched_sha256": "7d3db5f79aa9905a538622ee7a78672a7b72949f3dce06ac78cd85d543c68d2c"
+    },
+    "libraries/SITL/SIM_Frame.cpp": {
+      "original_sha256": "3328bbea7796d91409a252574c3e389ffb7ca11f123a1446ebd1b104dc0c470f",
+      "patched_sha256": "3050420870b29545041e6cb541b60464efb2d1bfc7292f088783f727cfa2f20c"
+    }
+  }
+}

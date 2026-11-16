@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -22,7 +21,7 @@ import sys
 import tempfile
 import time
 
-import payload_test as base
+import flight_support as base
 from pymavlink import mavutil
 
 ROOT, SOURCE = base.ROOT, base.SOURCE
@@ -53,7 +52,7 @@ class NullWriter:
         pass
 
 
-class PrototypeFlight(base.PayloadFlight):
+class PrototypeFlight(base.FlightSupport):
     def __init__(self, *args, scenario, expected_params, **kwargs):
         super().__init__(*args, **kwargs)
         self.scenario, self.expected_params = scenario, expected_params
@@ -513,10 +512,13 @@ def main():
         run_dir = Path(tempfile.mkdtemp(prefix="prototype-", dir=ROOT / "runs"))
     source_base = SOURCE / "Tools/autotest/default_params/copter.parm"
     snapshots = {"model.json": model_path, "experiment.parm": params_path, "base.parm": source_base,
-                 "manifest.json": manifest_path, "runner.py": Path(__file__), "payload_test.py": Path(base.__file__)}
-    for key in ("components", "mass_properties", "calibration", "reference_mass_patch"):
+                 "manifest.json": manifest_path, "runner.py": Path(__file__), "flight_support.py": Path(base.__file__)}
+    for key in ("components", "mass_properties", "propulsion_parameters", "calibration", "reference_mass_patch"):
         source = (manifest_path.parent / manifest[key]).resolve(strict=True)
         snapshots[source.name] = source
+    propulsion_name = Path(manifest["propulsion_parameters"]).name
+    if base.sha256(snapshots[propulsion_name]) != manifest["propulsion_parameters_sha256"]:
+        raise SystemExit("Propulsion calibration checksum differs from the manifest")
     if base.sha256(snapshots["reference-mass.patch"]) != manifest["patch_sha256"]:
         raise SystemExit("Propulsion patch checksum differs from the manifest")
     for name, source in snapshots.items():
