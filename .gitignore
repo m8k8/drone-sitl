@@ -1,0 +1,19 @@
+# Downloads, machine-local environments, and generated files
+/vendor/
+/.venv/
+/.cache/
+/runs/
+/.build.log
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Flight logs/state should remain local even if created outside runs/.
+*.BIN
+*.tlog
+*.tlog.raw
+eeprom.bin
+*.mavlink
