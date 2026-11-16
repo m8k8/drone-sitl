@@ -1,0 +1,1753 @@
+{
+  "frame_distribution_assumption": "4x0.6kg arm/support lumps at half motor radius;3.0kg central400x320x200mm box centered40mm belowmotorplane",
+  "battery_distribution_assumption": "2x1.29kg packs,170x61x58mm each,centersy=+-35.5mm,z=180mm belowmotorplane;10mm gap",
+  "sensitivity_assumption": "Apply+-0.5kg only to assumed centralframe lump; not measured mass uncertainty bounds",
+  "native_inertia_limit": "SIM_Frame uses only diagonal moments; products of inertia and general rigid-body Euler cross terms are not implemented",
+  "native_contact_limit": "SIM_Multicopter frame_height remains0.1m; no mesh,real landinggear/tankbay collisiongeometry or structural flex",
+  "sensor_geometry_limit": "Virtual rangefinder and primary sensors colocated with modeledCG; hardware mount coordinates in BOM affect inertia only",
+  "cases": [
+    {
+      "label": "nominal",
+      "mass_kg": 12.3387,
+      "cg_from_motor_plane_m": [
+        0.0014820037767349884,
+        0.0,
+        0.055436877466832
+      ],
+      "inertia_tensor_about_cg_kg_m2": [
+        [
+          0.7259281736366819,
+          2.7755575615628914e-17,
+          -0.0001824812586415012
+        ],
+        [
+          2.7755575615628914e-17,
+          0.7505937104976201,
+          0.0
+        ],
+        [
+          -0.0001824812586415012,
+          0.0,
+          1.319831762494271
+        ]
+      ],
+      "native_diagonal_inertia_kg_m2": [
+        0.7259281736366819,
+        0.7505937104976201,
+        1.319831762494271
+      ],
+      "native_motor_positions_from_cg_m": [
+        [
+          0.4128825699985818,
+          0.41436457377531677,
+          -0.055436877466832
+        ],
+        [
+          -0.41584657755205173,
+          -0.41436457377531677,
+          -0.055436877466832
+        ],
+        [
+          0.4128825699985818,
+          -0.41436457377531677,
+          -0.055436877466832
+        ],
+        [
+          -0.41584657755205173,
+          0.41436457377531677,
+          -0.055436877466832
+        ]
+      ],
+      "mass_elements": [
+        {
+          "id": "fc-1",
+          "mass_kg": 0.0346,
+          "center_m": [
+            0,
+            0,
+            -0.02
+          ],
+          "dimensions_m": [
+            0.0848,
+            0.044,
+            0.0124
+          ]
+        },
+        {
+          "id": "gps-1",
+          "mass_kg": 0.032,
+          "center_m": [
+            0,
+            0,
+            -0.12
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-central",
+          "mass_kg": 3.0,
+          "center_m": [
+            0,
+            0,
+            0.04
+          ],
+          "dimensions_m": [
+            0.4,
+            0.32,
+            0.2
+          ]
+        },
+        {
+          "id": "frame-arm-1",
+          "mass_kg": 0.6,
+          "center_m": [
+            0.20718228688765838,
+            0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-arm-2",
+          "mass_kg": 0.6,
+          "center_m": [
+            -0.20718228688765838,
+            -0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-arm-3",
+          "mass_kg": 0.6,
+          "center_m": [
+            0.20718228688765838,
+            -0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-arm-4",
+          "mass_kg": 0.6,
+          "center_m": [
+            -0.20718228688765838,
+            0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-1",
+          "mass_kg": 0.748,
+          "center_m": [
+            0.41436457377531677,
+            0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-2",
+          "mass_kg": 0.748,
+          "center_m": [
+            -0.41436457377531677,
+            -0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-3",
+          "mass_kg": 0.748,
+          "center_m": [
+            0.41436457377531677,
+            -0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-4",
+          "mass_kg": 0.748,
+          "center_m": [
+            -0.41436457377531677,
+            0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "battery-1",
+          "mass_kg": 1.29,
+          "center_m": [
+            0,
+            -0.0355,
+            0.18
+          ],
+          "dimensions_m": [
+            0.17,
+            0.061,
+            0.058
+          ]
+        },
+        {
+          "id": "battery-2",
+          "mass_kg": 1.29,
+          "center_m": [
+            0,
+            0.0355,
+            0.18
+          ],
+          "dimensions_m": [
+            0.17,
+            0.061,
+            0.058
+          ]
+        },
+        {
+          "id": "pm08-1",
+          "mass_kg": 0.185,
+          "center_m": [
+            -0.08,
+            0,
+            0.03
+          ],
+          "dimensions_m": [
+            0.045,
+            0.041,
+            0.026
+          ]
+        },
+        {
+          "id": "pdb-1",
+          "mass_kg": 0.021,
+          "center_m": [
+            -0.02,
+            0,
+            0.03
+          ],
+          "dimensions_m": [
+            0.055,
+            0.05,
+            0.006
+          ]
+        },
+        {
+          "id": "receiver-1",
+          "mass_kg": 0.037,
+          "center_m": [
+            0.05,
+            0,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "remote_id-1",
+          "mass_kg": 0.009,
+          "center_m": [
+            -0.1,
+            0,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "sd-1",
+          "mass_kg": 0.0004,
+          "center_m": [
+            0,
+            0,
+            -0.02
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "rangefinder-1",
+          "mass_kg": 0.05,
+          "center_m": [
+            0.08,
+            0,
+            0.16
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "camera-1",
+          "mass_kg": 0.15,
+          "center_m": [
+            0.18,
+            0,
+            0.03
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "antenna-bundle-lump-1",
+          "mass_kg": 0.01,
+          "center_m": [
+            0,
+            -0.12,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "antenna-bundle-lump-2",
+          "mass_kg": 0.01,
+          "center_m": [
+            0,
+            0.12,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "main_harness-1",
+          "mass_kg": 0.12,
+          "center_m": [
+            0,
+            0,
+            0.1
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "aux_harness-1",
+          "mass_kg": 0.04,
+          "center_m": [
+            0,
+            0,
+            0.02
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "camera_fuse-1",
+          "mass_kg": 0.02,
+          "center_m": [
+            0.1,
+            0,
+            0.02
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "battery_tray-1",
+          "mass_kg": 0.2006,
+          "center_m": [
+            0,
+            0,
+            0.215
+          ],
+          "dimensions_m": [
+            0.22,
+            0.16,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-1",
+          "mass_kg": 0.0114,
+          "center_m": [
+            -0.07,
+            -0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-2",
+          "mass_kg": 0.0114,
+          "center_m": [
+            -0.07,
+            0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-3",
+          "mass_kg": 0.0114,
+          "center_m": [
+            0.07,
+            -0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-4",
+          "mass_kg": 0.0114,
+          "center_m": [
+            0.07,
+            0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "straps-1",
+          "mass_kg": 0.01,
+          "center_m": [
+            -0.05,
+            -0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "straps-2",
+          "mass_kg": 0.01,
+          "center_m": [
+            0.05,
+            -0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "straps-3",
+          "mass_kg": 0.01,
+          "center_m": [
+            -0.05,
+            0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "straps-4",
+          "mass_kg": 0.01,
+          "center_m": [
+            0.05,
+            0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "battery_pad-1",
+          "mass_kg": 0.03,
+          "center_m": [
+            0,
+            0,
+            0.209
+          ],
+          "dimensions_m": [
+            0.17,
+            0.132,
+            0.002
+          ]
+        },
+        {
+          "id": "gps_mast-1",
+          "mass_kg": 0.02,
+          "center_m": [
+            0,
+            0,
+            -0.06
+          ],
+          "dimensions_m": [
+            0.012,
+            0.012,
+            0.12
+          ]
+        },
+        {
+          "id": "avionics_tray-1",
+          "mass_kg": 0.0958,
+          "center_m": [
+            0,
+            0,
+            -0.008
+          ],
+          "dimensions_m": [
+            0.14,
+            0.12,
+            0.003
+          ]
+        },
+        {
+          "id": "fc_tape-1",
+          "mass_kg": 0.0013,
+          "center_m": [
+            0,
+            0,
+            -0.012
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "rf_mount-1",
+          "mass_kg": 0.0228,
+          "center_m": [
+            0.08,
+            0,
+            0.145
+          ],
+          "dimensions_m": [
+            0.08,
+            0.05,
+            0.003
+          ]
+        },
+        {
+          "id": "camera_mount-1",
+          "mass_kg": 0.0214,
+          "center_m": [
+            0.15,
+            0,
+            0.03
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "rid_case-1",
+          "mass_kg": 0.01,
+          "center_m": [
+            -0.1,
+            0,
+            0
+          ],
+          "dimensions_m": [
+            0.04,
+            0.03,
+            0.02
+          ]
+        },
+        {
+          "id": "rid_pad-1",
+          "mass_kg": 0.0008,
+          "center_m": [
+            -0.1,
+            0,
+            0
+          ],
+          "dimensions_m": [
+            0.023,
+            0.033,
+            0.005
+          ]
+        },
+        {
+          "id": "fasteners-1",
+          "mass_kg": 0.055,
+          "center_m": [
+            0,
+            0,
+            0.05
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "power_tray-1",
+          "mass_kg": 0.077,
+          "center_m": [
+            -0.05,
+            0,
+            0.05
+          ],
+          "dimensions_m": [
+            0.15,
+            0.09,
+            0.003
+          ]
+        },
+        {
+          "id": "pdb_guard-1",
+          "mass_kg": 0.027399999999999997,
+          "center_m": [
+            -0.02,
+            0,
+            0.01
+          ],
+          "dimensions_m": [
+            0.08,
+            0.06,
+            0.003
+          ]
+        }
+      ]
+    },
+    {
+      "label": "mass-low",
+      "mass_kg": 11.8387,
+      "cg_from_motor_plane_m": [
+        0.0015445952680615271,
+        0.0,
+        0.05608884421431408
+      ],
+      "inertia_tensor_about_cg_kg_m2": [
+        [
+          0.7198706595449885,
+          2.7755575615628914e-17,
+          -0.00017055939469704944
+        ],
+        [
+          2.7755575615628914e-17,
+          0.7421350518579166,
+          0.0
+        ],
+        [
+          -0.00017055939469704944,
+          0.0,
+          1.3088972846129274
+        ]
+      ],
+      "native_diagonal_inertia_kg_m2": [
+        0.7198706595449885,
+        0.7421350518579166,
+        1.3088972846129274
+      ],
+      "native_motor_positions_from_cg_m": [
+        [
+          0.41281997850725527,
+          0.41436457377531677,
+          -0.05608884421431408
+        ],
+        [
+          -0.41590916904337827,
+          -0.41436457377531677,
+          -0.05608884421431408
+        ],
+        [
+          0.41281997850725527,
+          -0.41436457377531677,
+          -0.05608884421431408
+        ],
+        [
+          -0.41590916904337827,
+          0.41436457377531677,
+          -0.05608884421431408
+        ]
+      ],
+      "mass_elements": [
+        {
+          "id": "fc-1",
+          "mass_kg": 0.0346,
+          "center_m": [
+            0,
+            0,
+            -0.02
+          ],
+          "dimensions_m": [
+            0.0848,
+            0.044,
+            0.0124
+          ]
+        },
+        {
+          "id": "gps-1",
+          "mass_kg": 0.032,
+          "center_m": [
+            0,
+            0,
+            -0.12
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-central",
+          "mass_kg": 2.5,
+          "center_m": [
+            0,
+            0,
+            0.04
+          ],
+          "dimensions_m": [
+            0.4,
+            0.32,
+            0.2
+          ]
+        },
+        {
+          "id": "frame-arm-1",
+          "mass_kg": 0.6,
+          "center_m": [
+            0.20718228688765838,
+            0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-arm-2",
+          "mass_kg": 0.6,
+          "center_m": [
+            -0.20718228688765838,
+            -0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-arm-3",
+          "mass_kg": 0.6,
+          "center_m": [
+            0.20718228688765838,
+            -0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-arm-4",
+          "mass_kg": 0.6,
+          "center_m": [
+            -0.20718228688765838,
+            0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-1",
+          "mass_kg": 0.748,
+          "center_m": [
+            0.41436457377531677,
+            0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-2",
+          "mass_kg": 0.748,
+          "center_m": [
+            -0.41436457377531677,
+            -0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-3",
+          "mass_kg": 0.748,
+          "center_m": [
+            0.41436457377531677,
+            -0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-4",
+          "mass_kg": 0.748,
+          "center_m": [
+            -0.41436457377531677,
+            0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "battery-1",
+          "mass_kg": 1.29,
+          "center_m": [
+            0,
+            -0.0355,
+            0.18
+          ],
+          "dimensions_m": [
+            0.17,
+            0.061,
+            0.058
+          ]
+        },
+        {
+          "id": "battery-2",
+          "mass_kg": 1.29,
+          "center_m": [
+            0,
+            0.0355,
+            0.18
+          ],
+          "dimensions_m": [
+            0.17,
+            0.061,
+            0.058
+          ]
+        },
+        {
+          "id": "pm08-1",
+          "mass_kg": 0.185,
+          "center_m": [
+            -0.08,
+            0,
+            0.03
+          ],
+          "dimensions_m": [
+            0.045,
+            0.041,
+            0.026
+          ]
+        },
+        {
+          "id": "pdb-1",
+          "mass_kg": 0.021,
+          "center_m": [
+            -0.02,
+            0,
+            0.03
+          ],
+          "dimensions_m": [
+            0.055,
+            0.05,
+            0.006
+          ]
+        },
+        {
+          "id": "receiver-1",
+          "mass_kg": 0.037,
+          "center_m": [
+            0.05,
+            0,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "remote_id-1",
+          "mass_kg": 0.009,
+          "center_m": [
+            -0.1,
+            0,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "sd-1",
+          "mass_kg": 0.0004,
+          "center_m": [
+            0,
+            0,
+            -0.02
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "rangefinder-1",
+          "mass_kg": 0.05,
+          "center_m": [
+            0.08,
+            0,
+            0.16
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "camera-1",
+          "mass_kg": 0.15,
+          "center_m": [
+            0.18,
+            0,
+            0.03
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "antenna-bundle-lump-1",
+          "mass_kg": 0.01,
+          "center_m": [
+            0,
+            -0.12,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "antenna-bundle-lump-2",
+          "mass_kg": 0.01,
+          "center_m": [
+            0,
+            0.12,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "main_harness-1",
+          "mass_kg": 0.12,
+          "center_m": [
+            0,
+            0,
+            0.1
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "aux_harness-1",
+          "mass_kg": 0.04,
+          "center_m": [
+            0,
+            0,
+            0.02
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "camera_fuse-1",
+          "mass_kg": 0.02,
+          "center_m": [
+            0.1,
+            0,
+            0.02
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "battery_tray-1",
+          "mass_kg": 0.2006,
+          "center_m": [
+            0,
+            0,
+            0.215
+          ],
+          "dimensions_m": [
+            0.22,
+            0.16,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-1",
+          "mass_kg": 0.0114,
+          "center_m": [
+            -0.07,
+            -0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-2",
+          "mass_kg": 0.0114,
+          "center_m": [
+            -0.07,
+            0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-3",
+          "mass_kg": 0.0114,
+          "center_m": [
+            0.07,
+            -0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-4",
+          "mass_kg": 0.0114,
+          "center_m": [
+            0.07,
+            0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "straps-1",
+          "mass_kg": 0.01,
+          "center_m": [
+            -0.05,
+            -0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "straps-2",
+          "mass_kg": 0.01,
+          "center_m": [
+            0.05,
+            -0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "straps-3",
+          "mass_kg": 0.01,
+          "center_m": [
+            -0.05,
+            0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "straps-4",
+          "mass_kg": 0.01,
+          "center_m": [
+            0.05,
+            0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "battery_pad-1",
+          "mass_kg": 0.03,
+          "center_m": [
+            0,
+            0,
+            0.209
+          ],
+          "dimensions_m": [
+            0.17,
+            0.132,
+            0.002
+          ]
+        },
+        {
+          "id": "gps_mast-1",
+          "mass_kg": 0.02,
+          "center_m": [
+            0,
+            0,
+            -0.06
+          ],
+          "dimensions_m": [
+            0.012,
+            0.012,
+            0.12
+          ]
+        },
+        {
+          "id": "avionics_tray-1",
+          "mass_kg": 0.0958,
+          "center_m": [
+            0,
+            0,
+            -0.008
+          ],
+          "dimensions_m": [
+            0.14,
+            0.12,
+            0.003
+          ]
+        },
+        {
+          "id": "fc_tape-1",
+          "mass_kg": 0.0013,
+          "center_m": [
+            0,
+            0,
+            -0.012
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "rf_mount-1",
+          "mass_kg": 0.0228,
+          "center_m": [
+            0.08,
+            0,
+            0.145
+          ],
+          "dimensions_m": [
+            0.08,
+            0.05,
+            0.003
+          ]
+        },
+        {
+          "id": "camera_mount-1",
+          "mass_kg": 0.0214,
+          "center_m": [
+            0.15,
+            0,
+            0.03
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "rid_case-1",
+          "mass_kg": 0.01,
+          "center_m": [
+            -0.1,
+            0,
+            0
+          ],
+          "dimensions_m": [
+            0.04,
+            0.03,
+            0.02
+          ]
+        },
+        {
+          "id": "rid_pad-1",
+          "mass_kg": 0.0008,
+          "center_m": [
+            -0.1,
+            0,
+            0
+          ],
+          "dimensions_m": [
+            0.023,
+            0.033,
+            0.005
+          ]
+        },
+        {
+          "id": "fasteners-1",
+          "mass_kg": 0.055,
+          "center_m": [
+            0,
+            0,
+            0.05
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "power_tray-1",
+          "mass_kg": 0.077,
+          "center_m": [
+            -0.05,
+            0,
+            0.05
+          ],
+          "dimensions_m": [
+            0.15,
+            0.09,
+            0.003
+          ]
+        },
+        {
+          "id": "pdb_guard-1",
+          "mass_kg": 0.027399999999999997,
+          "center_m": [
+            -0.02,
+            0,
+            0.01
+          ],
+          "dimensions_m": [
+            0.08,
+            0.06,
+            0.003
+          ]
+        }
+      ]
+    },
+    {
+      "label": "mass-high",
+      "mass_kg": 12.8387,
+      "cg_from_motor_plane_m": [
+        0.0014242875057443511,
+        0.0,
+        0.05483569208720509
+      ],
+      "inertia_tensor_about_cg_kg_m2": [
+        [
+          0.7319760153504579,
+          2.7755575615628914e-17,
+          -0.00019347453449337782
+        ],
+        [
+          2.7755575615628914e-17,
+          0.759042607611128,
+          0.0
+        ],
+        [
+          -0.00019347453449337782,
+          0.0,
+          1.3307661512273363
+        ]
+      ],
+      "native_diagonal_inertia_kg_m2": [
+        0.7319760153504579,
+        0.759042607611128,
+        1.3307661512273363
+      ],
+      "native_motor_positions_from_cg_m": [
+        [
+          0.4129402862695724,
+          0.41436457377531677,
+          -0.05483569208720509
+        ],
+        [
+          -0.41578886128106113,
+          -0.41436457377531677,
+          -0.05483569208720509
+        ],
+        [
+          0.4129402862695724,
+          -0.41436457377531677,
+          -0.05483569208720509
+        ],
+        [
+          -0.41578886128106113,
+          0.41436457377531677,
+          -0.05483569208720509
+        ]
+      ],
+      "mass_elements": [
+        {
+          "id": "fc-1",
+          "mass_kg": 0.0346,
+          "center_m": [
+            0,
+            0,
+            -0.02
+          ],
+          "dimensions_m": [
+            0.0848,
+            0.044,
+            0.0124
+          ]
+        },
+        {
+          "id": "gps-1",
+          "mass_kg": 0.032,
+          "center_m": [
+            0,
+            0,
+            -0.12
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-central",
+          "mass_kg": 3.5,
+          "center_m": [
+            0,
+            0,
+            0.04
+          ],
+          "dimensions_m": [
+            0.4,
+            0.32,
+            0.2
+          ]
+        },
+        {
+          "id": "frame-arm-1",
+          "mass_kg": 0.6,
+          "center_m": [
+            0.20718228688765838,
+            0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-arm-2",
+          "mass_kg": 0.6,
+          "center_m": [
+            -0.20718228688765838,
+            -0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-arm-3",
+          "mass_kg": 0.6,
+          "center_m": [
+            0.20718228688765838,
+            -0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "frame-arm-4",
+          "mass_kg": 0.6,
+          "center_m": [
+            -0.20718228688765838,
+            0.20718228688765838,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-1",
+          "mass_kg": 0.748,
+          "center_m": [
+            0.41436457377531677,
+            0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-2",
+          "mass_kg": 0.748,
+          "center_m": [
+            -0.41436457377531677,
+            -0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-3",
+          "mass_kg": 0.748,
+          "center_m": [
+            0.41436457377531677,
+            -0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "propulsion-4",
+          "mass_kg": 0.748,
+          "center_m": [
+            -0.41436457377531677,
+            0.41436457377531677,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "battery-1",
+          "mass_kg": 1.29,
+          "center_m": [
+            0,
+            -0.0355,
+            0.18
+          ],
+          "dimensions_m": [
+            0.17,
+            0.061,
+            0.058
+          ]
+        },
+        {
+          "id": "battery-2",
+          "mass_kg": 1.29,
+          "center_m": [
+            0,
+            0.0355,
+            0.18
+          ],
+          "dimensions_m": [
+            0.17,
+            0.061,
+            0.058
+          ]
+        },
+        {
+          "id": "pm08-1",
+          "mass_kg": 0.185,
+          "center_m": [
+            -0.08,
+            0,
+            0.03
+          ],
+          "dimensions_m": [
+            0.045,
+            0.041,
+            0.026
+          ]
+        },
+        {
+          "id": "pdb-1",
+          "mass_kg": 0.021,
+          "center_m": [
+            -0.02,
+            0,
+            0.03
+          ],
+          "dimensions_m": [
+            0.055,
+            0.05,
+            0.006
+          ]
+        },
+        {
+          "id": "receiver-1",
+          "mass_kg": 0.037,
+          "center_m": [
+            0.05,
+            0,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "remote_id-1",
+          "mass_kg": 0.009,
+          "center_m": [
+            -0.1,
+            0,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "sd-1",
+          "mass_kg": 0.0004,
+          "center_m": [
+            0,
+            0,
+            -0.02
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "rangefinder-1",
+          "mass_kg": 0.05,
+          "center_m": [
+            0.08,
+            0,
+            0.16
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "camera-1",
+          "mass_kg": 0.15,
+          "center_m": [
+            0.18,
+            0,
+            0.03
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "antenna-bundle-lump-1",
+          "mass_kg": 0.01,
+          "center_m": [
+            0,
+            -0.12,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "antenna-bundle-lump-2",
+          "mass_kg": 0.01,
+          "center_m": [
+            0,
+            0.12,
+            0
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "main_harness-1",
+          "mass_kg": 0.12,
+          "center_m": [
+            0,
+            0,
+            0.1
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "aux_harness-1",
+          "mass_kg": 0.04,
+          "center_m": [
+            0,
+            0,
+            0.02
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "camera_fuse-1",
+          "mass_kg": 0.02,
+          "center_m": [
+            0.1,
+            0,
+            0.02
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "battery_tray-1",
+          "mass_kg": 0.2006,
+          "center_m": [
+            0,
+            0,
+            0.215
+          ],
+          "dimensions_m": [
+            0.22,
+            0.16,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-1",
+          "mass_kg": 0.0114,
+          "center_m": [
+            -0.07,
+            -0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-2",
+          "mass_kg": 0.0114,
+          "center_m": [
+            -0.07,
+            0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-3",
+          "mass_kg": 0.0114,
+          "center_m": [
+            0.07,
+            -0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "tray_support-4",
+          "mass_kg": 0.0114,
+          "center_m": [
+            0.07,
+            0.06,
+            0.15
+          ],
+          "dimensions_m": [
+            0.1,
+            0.02,
+            0.003
+          ]
+        },
+        {
+          "id": "straps-1",
+          "mass_kg": 0.01,
+          "center_m": [
+            -0.05,
+            -0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "straps-2",
+          "mass_kg": 0.01,
+          "center_m": [
+            0.05,
+            -0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "straps-3",
+          "mass_kg": 0.01,
+          "center_m": [
+            -0.05,
+            0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "straps-4",
+          "mass_kg": 0.01,
+          "center_m": [
+            0.05,
+            0.0355,
+            0.18
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "battery_pad-1",
+          "mass_kg": 0.03,
+          "center_m": [
+            0,
+            0,
+            0.209
+          ],
+          "dimensions_m": [
+            0.17,
+            0.132,
+            0.002
+          ]
+        },
+        {
+          "id": "gps_mast-1",
+          "mass_kg": 0.02,
+          "center_m": [
+            0,
+            0,
+            -0.06
+          ],
+          "dimensions_m": [
+            0.012,
+            0.012,
+            0.12
+          ]
+        },
+        {
+          "id": "avionics_tray-1",
+          "mass_kg": 0.0958,
+          "center_m": [
+            0,
+            0,
+            -0.008
+          ],
+          "dimensions_m": [
+            0.14,
+            0.12,
+            0.003
+          ]
+        },
+        {
+          "id": "fc_tape-1",
+          "mass_kg": 0.0013,
+          "center_m": [
+            0,
+            0,
+            -0.012
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "rf_mount-1",
+          "mass_kg": 0.0228,
+          "center_m": [
+            0.08,
+            0,
+            0.145
+          ],
+          "dimensions_m": [
+            0.08,
+            0.05,
+            0.003
+          ]
+        },
+        {
+          "id": "camera_mount-1",
+          "mass_kg": 0.0214,
+          "center_m": [
+            0.15,
+            0,
+            0.03
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "rid_case-1",
+          "mass_kg": 0.01,
+          "center_m": [
+            -0.1,
+            0,
+            0
+          ],
+          "dimensions_m": [
+            0.04,
+            0.03,
+            0.02
+          ]
+        },
+        {
+          "id": "rid_pad-1",
+          "mass_kg": 0.0008,
+          "center_m": [
+            -0.1,
+            0,
+            0
+          ],
+          "dimensions_m": [
+            0.023,
+            0.033,
+            0.005
+          ]
+        },
+        {
+          "id": "fasteners-1",
+          "mass_kg": 0.055,
+          "center_m": [
+            0,
+            0,
+            0.05
+          ],
+          "dimensions_m": null
+        },
+        {
+          "id": "power_tray-1",
+          "mass_kg": 0.077,
+          "center_m": [
+            -0.05,
+            0,
+            0.05
+          ],
+          "dimensions_m": [
+            0.15,
+            0.09,
+            0.003
+          ]
+        },
+        {
+          "id": "pdb_guard-1",
+          "mass_kg": 0.027399999999999997,
+          "center_m": [
+            -0.02,
+            0,
+            0.01
+          ],
+          "dimensions_m": [
+            0.08,
+            0.06,
+            0.003
+          ]
+        }
+      ]
+    }
+  ]
+}

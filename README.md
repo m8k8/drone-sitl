@@ -2,7 +2,7 @@
 
 ArduPilotをMac上で動かし、実機なしで離陸・位置保持・帰還を練習する専用プロジェクトです。最初は標準のクアッドコプターとMAVProxyの文字入力画面を使います。
 
-これはG06の重量・推力・散布装置を再現した物理モデルではありません。操作手順やプログラムの検証用です。
+標準機での操作練習に加え、公表仕様と仮定を使ったG06モデル、第１弾（B〜D）の部品表に基づくモデルを選べます。実機の実測校正や散布装置の再現はまだ行っていません。
 
 実行・可視化・テスト結果の詳しい資料は、独立した[drone-docsの実験一覧](https://github.com/m8k8/drone-docs/blob/main/sitl/README.md)にまとめています。
 
@@ -12,6 +12,32 @@ ArduPilotをMac上で動かし、実機なしで離陸・位置保持・帰還�
 | --- | --- | --- |
 | [001：標準quad](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/001-standard-quad/README.md) | 3kgの汎用機で環境・基本操作を確認 | 以下の`run.sh`、`smoke-test.sh` |
 | [002：G06暫定モデルの積載比較](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/002-g06-payload/README.md) | 公表仕様と仮定から作った機体で、水0・1・3・5Lを比較 | `prepare-g06.sh`、`payload-suite.sh` |
+| [003：第１弾B〜D](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/003-prototype-bd/README.md) | 部品表の12.3387kg、仮の重心・慣性、AUTO航路、下向き測距 | `prepare-prototype.sh`、`prototype-suite.sh` |
+
+第１弾B〜Dを試す場合は、初回セットアップ後に以下を実行します。通常のアームチェックを通して、基本飛行・AUTO航路・測距の偏りと範囲外からの復帰を各3回、±0.5kgの基本飛行を各1回、計11回試験します。
+
+```bash
+./scripts/prepare-prototype.sh
+./scripts/prototype-suite.sh --repeats 3
+```
+
+1種類ずつ確認する場合は、次のいずれかを使います。結果は毎回、新しい`runs/prototype-*`へ保存します。`--output`で保存先を指定した場合、既存ディレクトリへの上書きは拒否します。
+
+```bash
+./scripts/prototype-test.sh --scenario flight
+./scripts/prototype-test.sh --scenario mission
+./scripts/prototype-test.sh --scenario rangefinder
+```
+
+部品ごとの重量・仮配置は[`config/prototype-01/`](config/prototype-01/README.md)、再現する機能と限界は[実験003のモデル説明](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/003-prototype-bd/model.md)を参照してください。FPV映像やG12の無線を再現した試験ではありません。結果表は`./.venv/bin/python scripts/summarize_prototype.py runs/実行したsuite名`で表示できます。
+
+軌跡と測距応答の図を作る場合は、任意の描画用環境を追加します。以下の`suite名`を実際の保存先に置き換えてください。描画スクリプトは、全件成功したsuiteのAUTO試験3回と測距試験の1回目を使い、SVGとPNGを生成します。
+
+```bash
+.venv/bin/python -m venv .cache/plots-venv
+.cache/plots-venv/bin/python -m pip install -r requirements-plots.txt
+.cache/plots-venv/bin/python scripts/plot_prototype.py runs/suite名 --output runs/suite名/figures
+```
 
 実験002は初回セットアップ後、次の順に実行します。`prepare-g06.sh`は固定版ArduPilotへ同梱の小さなパッチを適用して再ビルドします。機体重量を変えてもモーターの推力が自動的に増えないよう、推進系の校正に使う質量を分離する変更です。
 
@@ -24,7 +50,7 @@ ArduPilotをMac上で動かし、実機なしで離陸・位置保持・帰還�
 
 空荷13.4946kgは未確定部品の仮枠を含む計算上のシナリオです。G06の実測重量や飛行性能を保証するモデルではありません。試験条件・根拠・未検証範囲は[実験002のモデル説明](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/002-g06-payload/model.md)を参照してください。
 
-`run.sh`の対話起動は引き続き実験001の標準3kg機です。実験002の自動試験は専用インスタンスを使用し、既存の対話起動や実機へ接続しません。
+`run.sh`の対話起動は引き続き実験001の標準3kg機です。実験002・003の自動試験は専用インスタンスを使用し、既存の対話起動や実機へ接続しません。
 
 **セットアップとビルドが済んでいる環境では**、`drone`ディレクトリから以下で起動し、「4. 最初の離陸・位置保持・帰還」へ進めます。新しくcloneした場合は「1. セットアップとビルド」から実行してください。
 

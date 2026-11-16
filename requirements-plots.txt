@@ -1,0 +1,2 @@
+# Optional visualization environment; not required by SITL or flight tests.
+matplotlib==3.11.2

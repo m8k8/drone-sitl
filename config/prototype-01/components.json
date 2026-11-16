@@ -1,0 +1,646 @@
+{
+  "source_document": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+  "source_docs_commit": "83dfb0be7130008cc49d900d6633d6adef8740dd",
+  "scope": "prototype stagesB-D, no tank/water/sprayer/RTK/onboard PC",
+  "mass_unit": "g",
+  "coordinates": "x forward,y right,z down; origin at motor-plane geometric center",
+  "layout_status": "Every installation coordinate is assumed. Hardware mounting and CG have not been measured.",
+  "rows": [
+    {
+      "id": "fc",
+      "name": "Pixhawk 6C Plastic SKU11054",
+      "stage": "B",
+      "quantity": 1,
+      "unit_mass_g": 34.6,
+      "total_mass_g": 34.6,
+      "mass_evidence": "published",
+      "source": "https://holybro.com/products/pixhawk-6c",
+      "center_m": [
+        0,
+        0,
+        -0.02
+      ],
+      "box_dimensions_m": [
+        0.0848,
+        0.044,
+        0.0124
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "gps",
+      "name": "M10 IST8310 Standard10pin SKU12040",
+      "stage": "B",
+      "quantity": 1,
+      "unit_mass_g": 32,
+      "total_mass_g": 32,
+      "mass_evidence": "published_scope_conditional",
+      "source": "https://holybro.com/products/m10-gps",
+      "center_m": [
+        0,
+        0,
+        -0.12
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "frame",
+      "name": "G06 frame, legs/supports retained; tank omitted",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 5400,
+      "total_mass_g": 5400,
+      "mass_evidence": "published_scope_conditional",
+      "source": "https://www.effort-tech.com/en/g06s",
+      "center_m": [
+        0,
+        0,
+        0.04
+      ],
+      "box_dimensions_m": [
+        0.4,
+        0.32,
+        0.2
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "propulsion",
+      "name": "X6 Plus G2 including MFP24x8 props and stock cables",
+      "stage": "C",
+      "quantity": 4,
+      "unit_mass_g": 748,
+      "total_mass_g": 2992,
+      "mass_evidence": "published",
+      "source": "https://www.hobbywing.com/en/uploads/file/20260104/51c225f38bf68c65072228943ae15f20.pdf",
+      "center_m": [
+        [
+          0.41436457377531677,
+          0.41436457377531677,
+          0
+        ],
+        [
+          -0.41436457377531677,
+          -0.41436457377531677,
+          0
+        ],
+        [
+          0.41436457377531677,
+          -0.41436457377531677,
+          0
+        ],
+        [
+          -0.41436457377531677,
+          0.41436457377531677,
+          0
+        ]
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "battery",
+      "name": "ETop 6S 10Ah25C AS150/XT150; two packs in series",
+      "stage": "C",
+      "quantity": 2,
+      "unit_mass_g": 1290,
+      "total_mass_g": 2580,
+      "mass_evidence": "seller_published",
+      "source": "https://rc-matrix.com/SHOP/4-6S-10000-25CS-3.html",
+      "center_m": [
+        [
+          0,
+          -0.0355,
+          0.18
+        ],
+        [
+          0,
+          0.0355,
+          0.18
+        ]
+      ],
+      "box_dimensions_m": [
+        0.17,
+        0.061,
+        0.058
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "pm08",
+      "name": "PM08-CAN tinned wires SKU15029 including stock cables",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 185,
+      "total_mass_g": 185,
+      "mass_evidence": "published_scope_conditional",
+      "source": "https://holybro.com/products/dronecan-pm08-power-module-14s-200a",
+      "center_m": [
+        -0.08,
+        0,
+        0.03
+      ],
+      "box_dimensions_m": [
+        0.045,
+        0.041,
+        0.026
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "pdb",
+      "name": "MATEKSYS FCHUB-12S V2",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 21,
+      "total_mass_g": 21,
+      "mass_evidence": "published",
+      "source": "https://www.mateksys.com/?portfolio=fchub-12s",
+      "center_m": [
+        -0.02,
+        0,
+        0.03
+      ],
+      "box_dimensions_m": [
+        0.055,
+        0.05,
+        0.006
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "receiver",
+      "name": "GR01 receiver, conditional Japanese G12 bundle",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 37,
+      "total_mass_g": 37,
+      "mass_evidence": "published_scope_conditional",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0.05,
+        0,
+        0
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "remote_id",
+      "name": "Futaba FRID-1",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 9,
+      "total_mass_g": 9,
+      "mass_evidence": "published",
+      "source": "https://www.rc.futaba.co.jp/products/detail/I00000343",
+      "center_m": [
+        -0.1,
+        0,
+        0
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "sd",
+      "name": "Transcend TS32GUSD350V32GB, card only",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 0.4,
+      "total_mass_g": 0.4,
+      "mass_evidence": "published",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        -0.02
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "rangefinder",
+      "name": "Benewake TF02-Pro including80cm cable",
+      "stage": "D",
+      "quantity": 1,
+      "unit_mass_g": 50,
+      "total_mass_g": 50,
+      "mass_evidence": "published",
+      "source": "https://ai.benewake.com/en/resources/technical-documents/tf02-pro-datasheet/",
+      "center_m": [
+        0.08,
+        0,
+        0.16
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "camera",
+      "name": "3-in-1 Ethernet camera plus supplied cables",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 150,
+      "total_mass_g": 150,
+      "mass_evidence": "design_allowance",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0.18,
+        0,
+        0.03
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "antennas",
+      "name": "G12 antennas/feeders, one conditional bundle; physical antenna count unknown",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 20,
+      "total_mass_g": 20,
+      "mass_evidence": "design_allowance",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        0
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "main_harness",
+      "name": "Additional8AWG harness,4mating contacts, insulation",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 120,
+      "total_mass_g": 120,
+      "mass_evidence": "design_allowance",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        0.1
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "aux_harness",
+      "name": "Additional auxiliary/signal wiring incl M10 cable if excluded",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 40,
+      "total_mass_g": 40,
+      "mass_evidence": "design_allowance",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        0.02
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "camera_fuse",
+      "name": "SCHURTER8020.5014/0031.1804 and mounting",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 20,
+      "total_mass_g": 20,
+      "mass_evidence": "design_allowance",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0.1,
+        0,
+        0.02
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "battery_tray",
+      "name": "EPXA220x160x3mm battery tray",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 200.6,
+      "total_mass_g": 200.6,
+      "mass_evidence": "material_calculation",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        0.215
+      ],
+      "box_dimensions_m": [
+        0.22,
+        0.16,
+        0.003
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "tray_support",
+      "name": "EPXA100x20x3mm support/stopper plates",
+      "stage": "C",
+      "quantity": 4,
+      "unit_mass_g": 11.4,
+      "total_mass_g": 45.6,
+      "mass_evidence": "material_calculation",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        [
+          -0.07,
+          -0.06,
+          0.15
+        ],
+        [
+          -0.07,
+          0.06,
+          0.15
+        ],
+        [
+          0.07,
+          -0.06,
+          0.15
+        ],
+        [
+          0.07,
+          0.06,
+          0.15
+        ]
+      ],
+      "box_dimensions_m": [
+        0.1,
+        0.02,
+        0.003
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "straps",
+      "name": "ONE-WRAP25.4x450mm straps",
+      "stage": "C",
+      "quantity": 4,
+      "unit_mass_g": 10,
+      "total_mass_g": 40,
+      "mass_evidence": "design_allowance",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        [
+          -0.05,
+          -0.0355,
+          0.18
+        ],
+        [
+          0.05,
+          -0.0355,
+          0.18
+        ],
+        [
+          -0.05,
+          0.0355,
+          0.18
+        ],
+        [
+          0.05,
+          0.0355,
+          0.18
+        ]
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "battery_pad",
+      "name": "EPTSEALER6800 pads and end cushioning",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 30,
+      "total_mass_g": 30,
+      "mass_evidence": "design_allowance",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        0.209
+      ],
+      "box_dimensions_m": [
+        0.17,
+        0.132,
+        0.002
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "gps_mast",
+      "name": "M10 supplied Fixed Carbon Fiber GPS mount",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 20,
+      "total_mass_g": 20,
+      "mass_evidence": "design_allowance",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        -0.06
+      ],
+      "box_dimensions_m": [
+        0.012,
+        0.012,
+        0.12
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "avionics_tray",
+      "name": "EPXA140x120x3mm FC/receiver base",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 95.8,
+      "total_mass_g": 95.8,
+      "mass_evidence": "material_calculation",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        -0.008
+      ],
+      "box_dimensions_m": [
+        0.14,
+        0.12,
+        0.003
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "fc_tape",
+      "name": "3M VHB4941 four20x20x1.1mm pieces",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 1.3,
+      "total_mass_g": 1.3,
+      "mass_evidence": "material_calculation",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        -0.012
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "rf_mount",
+      "name": "EPXA80x50x3mm downward rangefinder mount",
+      "stage": "D",
+      "quantity": 1,
+      "unit_mass_g": 22.8,
+      "total_mass_g": 22.8,
+      "mass_evidence": "material_calculation",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0.08,
+        0,
+        0.145
+      ],
+      "box_dimensions_m": [
+        0.08,
+        0.05,
+        0.003
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "camera_mount",
+      "name": "A5052 bracket from100x40x2mm blank",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 21.4,
+      "total_mass_g": 21.4,
+      "mass_evidence": "material_calculation",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0.15,
+        0,
+        0.03
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "rid_case",
+      "name": "Takachi SW-40B",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 10,
+      "total_mass_g": 10,
+      "mass_evidence": "published",
+      "source": "https://www.takachi-el.co.jp/products/SW",
+      "center_m": [
+        -0.1,
+        0,
+        0
+      ],
+      "box_dimensions_m": [
+        0.04,
+        0.03,
+        0.02
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "rid_pad",
+      "name": "Takachi UR-40",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 0.8,
+      "total_mass_g": 0.8,
+      "mass_evidence": "published",
+      "source": "https://www.takachi-el.co.jp/products/UR",
+      "center_m": [
+        -0.1,
+        0,
+        0
+      ],
+      "box_dimensions_m": [
+        0.023,
+        0.033,
+        0.005
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "fasteners",
+      "name": "Additional screws,nuts,standoffs,washers",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 55,
+      "total_mass_g": 55,
+      "mass_evidence": "design_allowance",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        0,
+        0,
+        0.05
+      ],
+      "box_dimensions_m": null,
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "power_tray",
+      "name": "EPXA150x90x3mm separate power base",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 77,
+      "total_mass_g": 77,
+      "mass_evidence": "material_calculation",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        -0.05,
+        0,
+        0.05
+      ],
+      "box_dimensions_m": [
+        0.15,
+        0.09,
+        0.003
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    },
+    {
+      "id": "pdb_guard",
+      "name": "EPXA80x60x3mm open-sided PDB guard",
+      "stage": "C",
+      "quantity": 1,
+      "unit_mass_g": 27.4,
+      "total_mass_g": 27.4,
+      "mass_evidence": "material_calculation",
+      "source": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+      "center_m": [
+        -0.02,
+        0,
+        0.01
+      ],
+      "box_dimensions_m": [
+        0.08,
+        0.06,
+        0.003
+      ],
+      "placement_status": "assumed, not a measured or verified installation"
+    }
+  ],
+  "nominal_total_mass_g": 12338.7,
+  "not_additionally_counted": [
+    "MFP24x8 propellers and X6 stock cables already in748g/rotor",
+    "PM08 stock cables already in185g",
+    "TF02 supplied80cm cable already in50g",
+    "Ground transmitter/charger/PC/tools/spares",
+    "Tank mass not subtracted from conditional5400g frame figure"
+  ]
+}

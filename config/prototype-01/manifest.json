@@ -1,0 +1,119 @@
+{
+  "model_status": "B-D prototype provisional physics and sensor model, not a validated real-aircraft digital twin",
+  "upstream_commit": "fb773567896014da007bca58358704d4a0d8516f",
+  "frame": "X",
+  "defaults": "defaults.parm",
+  "empty_mass_kg": 12.3387,
+  "nominal_mass_kg": 12.3387,
+  "reference_mass_kg": 13.4946,
+  "source_docs_commit": "83dfb0be7130008cc49d900d6633d6adef8740dd",
+  "source_bom": "https://github.com/m8k8/drone-docs/blob/83dfb0be7130008cc49d900d6633d6adef8740dd/hardware/prototype-01/README.md",
+  "components": "components.json",
+  "mass_properties": "mass-properties.json",
+  "propulsion_source_model": "../g06/models/payload-0l.json",
+  "propulsion_source_sha256": "824965203ff4c5ec1f73892280daf9f94d40344c79a88edb2a9f02c909e5a74d",
+  "calibration": "../g06/calibration.json",
+  "reference_mass_patch": "../g06/reference-mass.patch",
+  "patch_sha256": "56d9bd28677a0e723cf01340a9f93b0e39d136a04a3bdf37f9dba1adf5619cfb",
+  "patch_files": {
+    "libraries/SITL/SIM_Frame.h": {
+      "original_sha256": "d202efdbf3fd91ab42af2727a0f8458e4e508b25fd6b312d77f478ae424fa9be",
+      "patched_sha256": "7d3db5f79aa9905a538622ee7a78672a7b72949f3dce06ac78cd85d543c68d2c"
+    },
+    "libraries/SITL/SIM_Frame.cpp": {
+      "original_sha256": "3328bbea7796d91409a252574c3e389ffb7ca11f123a1446ebd1b104dc0c470f",
+      "patched_sha256": "3050420870b29545041e6cb541b60464efb2d1bfc7292f088783f727cfa2f20c"
+    }
+  },
+  "launch_args": [
+    "--serial5=sim:benewake_tf03"
+  ],
+  "rangefinder": {
+    "product_intent": "TF02-Pro UART",
+    "native_serial_emulator": "benewake_tf03",
+    "driver_type": 27,
+    "reading_rate_hz": 5,
+    "virtual_position_from_cg_m": [
+      0,
+      0,
+      0
+    ],
+    "distance_min_m": 0.1,
+    "distance_max_m": 13.5,
+    "noise_setting_m": 0.02,
+    "noise_status": "assumed native uniform random addition, not identified TF02-Pro noise"
+  },
+  "geometry_assumption": "Same1172mm squareX approximation as experiment002; motor leverarms translated to assumedCG",
+  "propulsion_calibration_unchanged": true,
+  "cases": [
+    {
+      "label": "nominal",
+      "model": "models/nominal.json",
+      "gross_mass_kg": 12.3387,
+      "mass_delta_kg": 0.0,
+      "inertia_kg_m2": [
+        0.7259281736366819,
+        0.7505937104976201,
+        1.319831762494271
+      ],
+      "cg_from_motor_plane_m": [
+        0.0014820037767349884,
+        0.0,
+        0.055436877466832
+      ],
+      "sensitivity_status": "nominal design estimate"
+    },
+    {
+      "label": "mass-low",
+      "model": "models/mass-low.json",
+      "gross_mass_kg": 11.8387,
+      "mass_delta_kg": -0.5,
+      "inertia_kg_m2": [
+        0.7198706595449885,
+        0.7421350518579166,
+        1.3088972846129274
+      ],
+      "cg_from_motor_plane_m": [
+        0.0015445952680615271,
+        0.0,
+        0.05608884421431408
+      ],
+      "sensitivity_status": "assumed sensitivity case, not a bound or real BOM"
+    },
+    {
+      "label": "mass-high",
+      "model": "models/mass-high.json",
+      "gross_mass_kg": 12.8387,
+      "mass_delta_kg": 0.5,
+      "inertia_kg_m2": [
+        0.7319760153504579,
+        0.759042607611128,
+        1.3307661512273363
+      ],
+      "cg_from_motor_plane_m": [
+        0.0014242875057443511,
+        0.0,
+        0.05483569208720509
+      ],
+      "sensitivity_status": "assumed sensitivity case, not a bound or real BOM"
+    }
+  ],
+  "functional_coverage": {
+    "ArduCopter": "actual compiled controller running onhost; Pixhawk CPU/powerhardware notemulated",
+    "M10": "generic SITL GPS/compass; not an identified M10 error model or RTK",
+    "TF02-Pro": "native compatible UART packet path and driver;5Hz emulator,notreal100Hz device/optics",
+    "G12": "RC/MAVLink control interface only; radio propagation,packet delay/loss not modeled by nominalconfig",
+    "FPV": "camera mass/assumed placement only; no images,networkvideoor latency",
+    "RemoteID": "mass/assumed placement only; no RFbroadcast",
+    "power_distribution": "mass/assumed placement only; no connector thermal/inrush/fuse behavior",
+    "microSD": "mass; flight logs use host filesystem rather than physicalcardhardware"
+  },
+  "limitations": [
+    "Frame5400g scope unresolved; additionalweights include allowances; nominal mass not measurementor bound",
+    "All installationpositions are assumptions; geometry,CG,inertia andbatterytray strength unmeasured",
+    "Fixed oldlinear power/thrust fit andassumed0.06ohm packresistance remain; no endurancevalidation",
+    "Native batterycurrent sums motors only; camera,radio,FC,sensorsandDC-DC consumption not added",
+    "Genericgroundcontact0.1m,diagonal inertiaonly; no structurecollisionor flexibility",
+    "No tank,water,sprayer,RTK,AIimageprocessingor obstacleavoidance"
+  ]
+}
