@@ -20,6 +20,8 @@ import sys
 import tempfile
 import time
 
+from gazebo_view import GazeboView, stop_child
+
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE, CONFIG = ROOT / "vendor/ardupilot", ROOT / "config/prototype-01"
 RUN = ROOT / "runs/prototype-manual"
@@ -112,31 +114,16 @@ def wait_for_own_listener(process, lsof, log_path, model):
     raise RuntimeError("起動したArduCopter自身のTCP6170待受を確認できません。MAVProxyは接続しません。")
 
 
-def stop_child(process):
-    if process is None or process.poll() is not None:
-        return
-    # Both children own separate sessions/groups; no other launcher is in these groups.
-    try:
-        os.killpg(process.pid, signal.SIGTERM)
-        process.wait(timeout=3)
-    except ProcessLookupError:
-        process.wait()
-    except subprocess.TimeoutExpired:
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        process.wait(timeout=3)
-
-
 def interrupted(_signum, _frame):
     raise KeyboardInterrupt
 
 
 def launch(args):
     binary, proxy_path, lsof, model, manifest, inputs = preflight()
+    if args.gazebo:
+        GazeboView.require_environment()
     reservations = reserve_ports()
-    arducopter = proxy = None
+    arducopter = proxy = viewer = None
     metadata = record_path = log_stream = lock_stream = None
     exit_code = 1
     try:
@@ -155,19 +142,24 @@ def launch(args):
             previous = json.loads(saved.read_text()) if saved.exists() else None
             if previous != fingerprint:
                 raise RuntimeError("保存パラメータとモデル・既定設定の版が一致しません。./scripts/run.sh --reset で保存パラメータを初期化してください。ログは保持されます。")
+        sessions = RUN / "sessions"
+        sessions.mkdir(exist_ok=True)
+        session = Path(tempfile.mkdtemp(prefix=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-"), dir=sessions))
+        if args.gazebo:
+            viewer = GazeboView(session, model, instance=INSTANCE, home=HOME_POSITION)
+            viewer.start()
         if args.reset:
             eeprom.unlink(missing_ok=True)
         for name, path in inputs.items():
             shutil.copy2(path, RUN / name)
         write_json(saved, fingerprint)
-        sessions = RUN / "sessions"
-        sessions.mkdir(exist_ok=True)
-        session = Path(tempfile.mkdtemp(prefix=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-"), dir=sessions))
         for name in inputs:
             shutil.copy2(RUN / name, session / name)
         record_path, log_path = session / "launch.json", session / "sitl.log"
         command = [str(binary), "-I", str(INSTANCE), "--model", "X:model.json", "--speedup", "1",
                    "--home", HOME_POSITION, "--defaults", "base.parm,experiment.parm", "--serial5=sim:benewake_tf03"]
+        if args.gazebo:
+            command.append("--enable-fgview")
         proxy_command = [sys.executable, str(proxy_path), "--retries", "5", "--master", "tcp:127.0.0.1:6170",
                          "--sitl", "127.0.0.1:5911", "--out", "127.0.0.1:14550", "--default-modules", MODULES,
                          "--logfile", str(session.relative_to(RUN) / "mav.tlog")]
@@ -178,6 +170,8 @@ def launch(args):
                     "project_commit": subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip(),
                     "arducopter_command": command, "mavproxy_command": proxy_command,
                     "automatic_arm": False, "state": "starting"}
+        if viewer is not None:
+            metadata.update(gazebo_pose_udp_port=viewer.port, gazebo_partition=viewer.partition)
         write_json(record_path, metadata)
         print("第１弾B〜D / 12.3387kg / CMACで手動起動します。自動アームはしません。", flush=True)
         print("終了: Ctrl+C。保存状態: runs/prototype-manual、機体BIN: runs/prototype-manual/logs", flush=True)
@@ -195,6 +189,7 @@ def launch(args):
         metadata.update(mavproxy_pid=proxy.pid, state="running")
         write_json(record_path, metadata)
         model_checked, model_deadline = False, time.monotonic() + 20
+        gazebo_checked, gazebo_deadline = False, time.monotonic() + 35
         while True:
             if arducopter.poll() is not None:
                 raise RuntimeError(f"ArduCopterが終了しました（{arducopter.returncode}）。{log_path}を確認してください。")
@@ -208,6 +203,22 @@ def launch(args):
                 if model_checked:
                     metadata["runtime_model_verified"] = True
                     write_json(record_path, metadata)
+            if viewer is not None:
+                message = viewer.failure()
+                if message:
+                    if not gazebo_checked:
+                        raise RuntimeError(message)
+                    print(f"{message} SITLとMAVProxyは動作を続けます。", file=sys.stderr, flush=True)
+                    viewer.close()
+                    viewer = None
+                elif not gazebo_checked:
+                    gazebo_checked = viewer.is_ready()
+                    if gazebo_checked:
+                        metadata["gazebo_pose_stream_ready"] = True
+                        write_json(record_path, metadata)
+                        print("Gazeboへ機体の真値を配信中です。", flush=True)
+                    elif time.monotonic() > gazebo_deadline:
+                        raise RuntimeError(f"Gazeboへの姿勢反映を確認できません。{session / 'gazebo-bridge.log'} を確認してください。")
             time.sleep(0.1)
     except KeyboardInterrupt:
         exit_code = 130
@@ -222,6 +233,8 @@ def launch(args):
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         stop_child(proxy)
         stop_child(arducopter)
+        if viewer is not None:
+            viewer.close()
         for sock in reservations:
             sock.close()
         if log_stream is not None:
@@ -239,6 +252,7 @@ def launch(args):
 def main():
     parser = argparse.ArgumentParser(description="第１弾B〜D（12.3387kg）の手動SITL起動。保存先: runs/prototype-manual。自動アームはしません。")
     parser.add_argument("--reset", action="store_true", help="ポート確認後にeeprom.binだけを削除して既定設定へ戻す。過去ログは保持")
+    parser.add_argument("--gazebo", action="store_true", help="シミュレーターの真値をGazebo Jettyにリアルタイムで表示する")
     args = parser.parse_args()
     signal.signal(signal.SIGINT, interrupted)
     signal.signal(signal.SIGTERM, interrupted)

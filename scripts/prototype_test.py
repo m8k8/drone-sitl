@@ -53,9 +53,10 @@ class NullWriter:
 
 
 class PrototypeFlight(base.FlightSupport):
-    def __init__(self, *args, scenario, expected_params, **kwargs):
+    def __init__(self, *args, scenario, expected_params, gazebo=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.scenario, self.expected_params = scenario, expected_params
+        self.gazebo = gazebo
         self.sonar_position_z = 0.0
         self.mission_reached = []
         self.waypoints = []
@@ -124,6 +125,19 @@ class PrototypeFlight(base.FlightSupport):
         self.summary.setdefault("parameter_changes", []).append(
             {"time_boot_s": self.sim_time, "parameter": name, "value": value})
 
+    def wait_for_gazebo(self):
+        print("Waiting for the Gazebo 3D view before arming…", flush=True)
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline:
+            if failure := self.gazebo.failure():
+                raise RuntimeError(failure)
+            if self.gazebo.is_ready(require_gui=True):
+                self.summary["gazebo"]["ready_before_arm"] = True
+                print("Gazebo 3D view ready", flush=True)
+                return
+            self.receive()
+        raise TimeoutError(f"Gazebo 3D view did not become ready. See {self.log_path.parent / 'gazebo-bridge.log'} and gazebo-gui.log.")
+
     def prepare(self):
         self.step("connect")
         heartbeat = self.wait("ArduPilot heartbeat", lambda m: m.get_type() == "HEARTBEAT" and
@@ -164,6 +178,8 @@ class PrototypeFlight(base.FlightSupport):
         if not all(math.isfinite(v) for v in self.true_home):
             raise RuntimeError("Invalid simulator truth origin")
         self.summary["truth_home"] = dict(zip(("lat_deg", "lon_deg", "alt_m"), self.true_home))
+        if self.gazebo is not None:
+            self.wait_for_gazebo()
         self.set_mode("GUIDED")
         self.step("arm")
         self.command(mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 1)
@@ -484,10 +500,13 @@ def main():
     parser.add_argument("--label", default="prototype-01")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--instance", type=int, default=40)
-    parser.add_argument("--speedup", type=float, default=5)
+    parser.add_argument("--speedup", type=float, help="Simulation speed multiplier (default: 1 with --gazebo, 5 otherwise)")
     parser.add_argument("--home", default=base.HOME)
     parser.add_argument("--wall-timeout", type=float, default=600)
+    parser.add_argument("--gazebo", action="store_true", help="Show this automated test in Gazebo Jetty")
     args = parser.parse_args()
+    if args.speedup is None:
+        args.speedup = 1 if args.gazebo else 5
     if not 40 <= args.instance <= 100 or not 0 < args.speedup <= 20 or args.wall_timeout <= 0:
         parser.error("Use instance 40..100, speedup >0..20, and a positive deadline")
     model_path, params_path, manifest_path = (p.resolve(strict=True) for p in (args.model, args.params, args.manifest))
@@ -504,6 +523,13 @@ def main():
     binary = SOURCE / "build/sitl/bin/arducopter"
     if not binary.is_file():
         raise SystemExit("Run prepare-prototype.sh first")
+    if args.gazebo:
+        from gazebo_view import GazeboView
+
+        try:
+            GazeboView.require_environment()
+        except RuntimeError as error:
+            raise SystemExit(str(error)) from error
     if args.output:
         run_dir = args.output.resolve()
         run_dir.mkdir(parents=True, exist_ok=False)
@@ -513,6 +539,9 @@ def main():
     source_base = SOURCE / "Tools/autotest/default_params/copter.parm"
     snapshots = {"model.json": model_path, "experiment.parm": params_path, "base.parm": source_base,
                  "manifest.json": manifest_path, "runner.py": Path(__file__), "flight_support.py": Path(base.__file__)}
+    if args.gazebo:
+        for name in ("gazebo_view.py", "gazebo_bridge.py", "gazebo_world.py"):
+            snapshots[name] = ROOT / "scripts" / name
     for key in ("components", "mass_properties", "propulsion_parameters", "calibration", "reference_mass_patch"):
         source = (manifest_path.parent / manifest[key]).resolve(strict=True)
         snapshots[source.name] = source
@@ -539,9 +568,12 @@ def main():
                "completed_steps": [], "events": [], "recent_status_text": [], "metrics": {}}
     summary["criteria"]["return_mode"] = "AUTO" if args.scenario == "mission" else "RTL"
     summary["criteria"]["requires_nonempty_dataflash_log"] = True
-    link = process = flight = None
+    link = process = flight = gazebo = None
     completed = False
     started = time.monotonic()
+    if args.gazebo:
+        metadata["gazebo"] = {"enabled": True}
+        summary["gazebo"] = {"ready_before_arm": False}
     (run_dir / "run.json").write_text(json.dumps(metadata, indent=2) + "\n")
     try:
         reservations = []
@@ -561,14 +593,20 @@ def main():
         if launch_args != ["--serial5=sim:benewake_tf03"]:
             raise RuntimeError(f"Unexpected rangefinder launch arguments: {launch_args}")
         command.extend(launch_args)
+        if args.gazebo:
+            gazebo = GazeboView(run_dir, model, instance=args.instance, home=args.home)
+            command.append("--enable-fgview")
+            metadata["gazebo"].update(port=gazebo.port, partition=gazebo.partition)
         metadata["command"] = command
         (run_dir / "run.json").write_text(json.dumps(metadata, indent=2) + "\n")
         print(f"Run: {run_dir}", flush=True)
+        if gazebo is not None:
+            gazebo.start()
         with (run_dir / "sitl.log").open("w") as log, (run_dir / "telemetry.csv").open("w", newline="") as csv_file:
             process = subprocess.Popen(command, cwd=run_dir, stdin=subprocess.DEVNULL, stdout=log,
                                        stderr=subprocess.STDOUT, start_new_session=True)
             flight = PrototypeFlight(link, process, csv_file, summary, args.wall_timeout, run_dir / "sitl.log", model,
-                                     scenario=args.scenario, expected_params=read_params(params_path))
+                                     scenario=args.scenario, expected_params=read_params(params_path), gazebo=gazebo)
             flight.fly()
         completed = True
     except (Exception, KeyboardInterrupt) as error:
@@ -583,6 +621,12 @@ def main():
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait(timeout=5)
+        if gazebo is not None:
+            if failure := gazebo.failure():
+                summary["gazebo"]["exit_before_test_finished"] = failure
+                if summary["gazebo"]["ready_before_arm"]:
+                    print(f"Gazebo: {failure}", file=sys.stderr, flush=True)
+            gazebo.close()
         if flight is not None:
             (run_dir / "parameters.json").write_text(json.dumps(flight.parameters, indent=2, sort_keys=True) + "\n")
             summary["sim_elapsed_seconds"] = flight.sim_time

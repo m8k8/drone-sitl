@@ -74,6 +74,18 @@ mode RTL
 
 手動起動はinstance 41（TCP 6170、RC入力UDP 5911）、自動試験はinstance 40を使用します。使用中ポートへ勝手に接続しません。手動起動のMAVProxyはUDP 14550へ転送するためQGroundControlへ接続できますが、QGCのGUI表示は未検証です。[可視化ガイド](https://github.com/m8k8/drone-docs/blob/main/sitl/guides/visualization.md)
 
+### Gazeboでリアルタイムに見る
+
+Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行します。Gazebo Jettyはプロジェクト内の `.cache/gazebo/` に入ります。次の起動からはこのコマンドだけでGazeboのウィンドウとMAVProxyが開きます。
+
+```bash
+./scripts/run.sh --gazebo
+```
+
+離陸・帰還は上記のMAVProxy手順で操作します。近くから追うには、Gazeboで機体 `prototype_bd` を右クリックして **Follow** を選びます。離陸後もズームと向きを操作できます。
+
+同じArduCopterと12.3387 kgの `X:model.json` が飛行を計算し、位置と姿勢をローカルUDP 5913経由でGazeboに渡します。機体のモーター位置とプロペラ径はモデルに合わせ、機体外装と飛行場は模式的な描画にしています。Gazeboのウィンドウを閉じても、起動済みのSITLとMAVProxyは動作を続けます。起動ログは各セッションの `gazebo-server.log`、`gazebo-gui.log`、`gazebo-bridge.log` にあります。
+
 ## 3. 自動で試験する
 
 ```bash
@@ -97,6 +109,22 @@ mode RTL
 各回は新しい保存状態で起動し、設定・コードのコピー、ハッシュ、判定結果、CSV、BINログを新しい`runs/prototype-*`へ保存します。`--output`で既存ディレクトリを指定した場合は上書きを拒否します。終了コード0が成功です。
 
 2026-11-16の本試験は11/11成功し、`runs/prototype-final-20261116/`に保持しています。成功は記録したモデル・判定条件に対するもので、実機性能の保証ではありません。[試験条件と結果](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/003-prototype-bd/README.md)
+
+### Gazeboで自動試験を見る
+
+Gazebo Jettyのセットアップ後、次のコマンドだけで自動試験用のSITLとGazeboウィンドウが開きます。`run.sh --gazebo` で手動飛行用のウィンドウを開いている場合は、別のウィンドウに試験機が表示されます。
+
+```bash
+./scripts/prototype-test.sh --scenario mission --gazebo
+```
+
+離陸から帰還・着陸までスクリプトが操作します。`flight` と `rangefinder` にも `--gazebo` を付けられます。シミュレーション速度の既定値は `--gazebo` 付きで1倍速、通常の自動試験で5倍速です。試験用のGazeboは各試験の終了時に閉じます。出力先には判定結果 `summary.json` と描画側のログ `gazebo-*.log` が残ります。
+
+`prototype-suite.sh` でも `--gazebo` を指定できます。各試験が専用のGazeboウィンドウを開きます。
+
+```bash
+./scripts/prototype-suite.sh --repeats 1 --scenarios mission --no-mass-sensitivity --gazebo
+```
 
 ## 4. 保存した結果を見る
 

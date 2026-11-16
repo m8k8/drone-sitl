@@ -19,12 +19,20 @@ def main():
                         default=["flight", "mission", "rangefinder"])
     parser.add_argument("--no-mass-sensitivity", action="store_true")
     parser.add_argument("--sensitivity-repeats", type=int, default=1)
-    parser.add_argument("--speedup", type=float, default=5)
+    parser.add_argument("--speedup", type=float, help="SITL speed (default: 5, or 1 with --gazebo)")
+    parser.add_argument("--gazebo", action="store_true", help="Open a Gazebo view for each automatic flight")
     parser.add_argument("--instance", type=int, default=40)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.repeats < 1 or args.sensitivity_repeats < 1:
         parser.error("Repetitions must be positive")
+    if args.gazebo:
+        from gazebo_view import GazeboView
+
+        try:
+            GazeboView.require_environment()
+        except RuntimeError as error:
+            parser.error(str(error))
     output = args.output or ROOT / "runs" / ("prototype-01-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -39,6 +47,8 @@ def main():
              "nominal_repeats": args.repeats, "sensitivity_repeats": args.sensitivity_repeats,
              "scenarios": args.scenarios, "mass_sensitivity": not args.no_mass_sensitivity,
              "runs": [], "result": "incomplete"}
+    if args.gazebo:
+        suite["gazebo"] = True
     suite_path = output / "suite.json"
     suite_path.write_text(json.dumps(suite, indent=2) + "\n")
     for case, scenario, repeat in matrix:
@@ -46,7 +56,11 @@ def main():
         print(f"\nRunning {label}", flush=True)
         command = [sys.executable, str(ROOT / "scripts/prototype_test.py"), "--scenario", scenario,
                    "--model", str(manifest_path.parent / cases[case]["model"]), "--label", label,
-                   "--output", str(output / label), "--instance", str(args.instance), "--speedup", str(args.speedup)]
+                   "--output", str(output / label), "--instance", str(args.instance)]
+        if args.gazebo:
+            command.append("--gazebo")
+        if args.speedup is not None:
+            command.extend(("--speedup", str(args.speedup)))
         process = subprocess.run(command, cwd=ROOT)
         summary_path = output / label / "summary.json"
         summary = json.loads(summary_path.read_text()) if summary_path.exists() else {"result": "failed", "error": "No summary produced"}
