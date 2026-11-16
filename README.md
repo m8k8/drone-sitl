@@ -4,7 +4,27 @@ ArduPilotをMac上で動かし、実機なしで離陸・位置保持・帰還�
 
 これはG06の重量・推力・散布装置を再現した物理モデルではありません。操作手順やプログラムの検証用です。
 
-実行・可視化・テスト結果の詳しい資料は、独立した[drone-docs](https://github.com/m8k8/drone-docs)にまとめています。
+実行・可視化・テスト結果の詳しい資料は、独立した[drone-docsの実験一覧](https://github.com/m8k8/drone-docs/blob/main/sitl/README.md)にまとめています。
+
+## 実験を選ぶ
+
+| 実験 | モデルと目的 | 実行方法 |
+| --- | --- | --- |
+| [001：標準quad](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/001-standard-quad/README.md) | 3kgの汎用機で環境・基本操作を確認 | 以下の`run.sh`、`smoke-test.sh` |
+| [002：G06暫定モデルの積載比較](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/002-g06-payload/README.md) | 公表仕様と仮定から作った機体で、水0・1・3・5Lを比較 | `prepare-g06.sh`、`payload-suite.sh` |
+
+実験002は初回セットアップ後、次の順に実行します。`prepare-g06.sh`は固定版ArduPilotへ同梱の小さなパッチを適用して再ビルドします。機体重量を変えてもモーターの推力が自動的に増えないよう、推進系の校正に使う質量を分離する変更です。
+
+```bash
+./scripts/prepare-g06.sh
+./scripts/payload-suite.sh --repeats 3
+```
+
+各条件の結果・設定・時系列は新しい`runs/g06-payload-*/`に保存します。途中の試験が失敗しても他の条件を続け、全件の成否を記録します。初回に短く動作確認する場合は`./scripts/payload-suite.sh --payloads 0 --repeats 1`を使います。
+
+空荷13.4946kgは未確定部品の仮枠を含む計算上のシナリオです。G06の実測重量や飛行性能を保証するモデルではありません。試験条件・根拠・未検証範囲は[実験002のモデル説明](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/002-g06-payload/model.md)を参照してください。
+
+`run.sh`の対話起動は引き続き実験001の標準3kg機です。実験002の自動試験は専用インスタンスを使用し、既存の対話起動や実機へ接続しません。
 
 **セットアップとビルドが済んでいる環境では**、`drone`ディレクトリから以下で起動し、「4. 最初の離陸・位置保持・帰還」へ進めます。新しくcloneした場合は「1. セットアップとビルド」から実行してください。
 

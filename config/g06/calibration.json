@@ -1,0 +1,243 @@
+{
+  "source": "https://www.hobbywing.com/en/products/x6-plus-g2",
+  "source_pdf": "https://www.hobbywing.com/uploads/file/20251212/be8db6e8539e5b63271859811f66214a.pdf",
+  "conditions": "Manufacturer 46 V, sea level, 25 C; static bench data. SITL fit evaluated at its sea-level density.",
+  "fit_band_throttle_pct": [
+    33,
+    51
+  ],
+  "effective_zero_throttle_fraction": 0.224,
+  "prop_expo": 0,
+  "thrust_fit_band_max_abs_error_pct": 2.025865086727452,
+  "thrust_full_table_max_abs_error_pct": 8.493112021773431,
+  "current_fit_band_max_abs_error_pct": 27.635798258854514,
+  "current_full_table_max_abs_error_pct": 54.09891494024739,
+  "propulsion_constants_equal_across_cases": true,
+  "propulsion_constants": {
+    "power_factor_w_per_n": 10.49722142905017,
+    "effective_prop_area_m2": 0.12254790723836306,
+    "max_outflow_velocity_m_s": 44.323418664113845
+  },
+  "rows": [
+    {
+      "throttle_pct": 33.0,
+      "measured_thrust_kgf": 1.736,
+      "model_thrust_kgf": 1.7110257731958765,
+      "thrust_error_pct": -1.4386075347997407,
+      "measured_current_a": 3.0,
+      "model_current_a": 3.8290739477656355,
+      "current_error_pct": 27.635798258854514,
+      "measured_input_power_w": 137.7
+    },
+    {
+      "throttle_pct": 35.0,
+      "measured_thrust_kgf": 2.017,
+      "model_thrust_kgf": 2.0338608247422676,
+      "thrust_error_pct": 0.8359357829582414,
+      "measured_current_a": 3.6,
+      "model_current_a": 4.551540730362924,
+      "current_error_pct": 26.431686954525667,
+      "measured_input_power_w": 167.2
+    },
+    {
+      "throttle_pct": 37.0,
+      "measured_thrust_kgf": 2.318,
+      "model_thrust_kgf": 2.356695876288659,
+      "thrust_error_pct": 1.6693648096919311,
+      "measured_current_a": 4.4,
+      "model_current_a": 5.274007512960213,
+      "current_error_pct": 19.8638071127321,
+      "measured_input_power_w": 201.7
+    },
+    {
+      "throttle_pct": 39.0,
+      "measured_thrust_kgf": 2.634,
+      "model_thrust_kgf": 2.6795309278350516,
+      "thrust_error_pct": 1.7285849595691571,
+      "measured_current_a": 5.3,
+      "model_current_a": 5.996474295557505,
+      "current_error_pct": 13.14102444448122,
+      "measured_input_power_w": 241.8
+    },
+    {
+      "throttle_pct": 42.0,
+      "measured_thrust_kgf": 3.131,
+      "model_thrust_kgf": 3.163783505154639,
+      "thrust_error_pct": 1.0470618062804027,
+      "measured_current_a": 6.7,
+      "model_current_a": 7.080174469453438,
+      "current_error_pct": 5.674245812737877,
+      "measured_input_power_w": 310.4
+    },
+    {
+      "throttle_pct": 45.0,
+      "measured_thrust_kgf": 3.646,
+      "model_thrust_kgf": 3.648036082474227,
+      "thrust_error_pct": 0.05584428069740355,
+      "measured_current_a": 8.4,
+      "model_current_a": 8.163874643349372,
+      "current_error_pct": -2.8110161506027187,
+      "measured_input_power_w": 388.7
+    },
+    {
+      "throttle_pct": 48.0,
+      "measured_thrust_kgf": 4.174,
+      "model_thrust_kgf": 4.132288659793814,
+      "thrust_error_pct": -0.9993133734112591,
+      "measured_current_a": 10.4,
+      "model_current_a": 9.247574817245306,
+      "current_error_pct": -11.081011372641292,
+      "measured_input_power_w": 476.5
+    },
+    {
+      "throttle_pct": 51.0,
+      "measured_thrust_kgf": 4.712,
+      "model_thrust_kgf": 4.6165412371134025,
+      "thrust_error_pct": -2.025865086727452,
+      "measured_current_a": 12.4,
+      "model_current_a": 10.331274991141242,
+      "current_error_pct": -16.683266200473856,
+      "measured_input_power_w": 572.3
+    },
+    {
+      "throttle_pct": 54.0,
+      "measured_thrust_kgf": 5.256,
+      "model_thrust_kgf": 5.10079381443299,
+      "thrust_error_pct": -2.9529335153540837,
+      "measured_current_a": 14.7,
+      "model_current_a": 11.414975165037175,
+      "current_error_pct": -22.347107720835535,
+      "measured_input_power_w": 676.2
+    },
+    {
+      "throttle_pct": 56.99999999999999,
+      "measured_thrust_kgf": 5.807,
+      "model_thrust_kgf": 5.585046391752577,
+      "thrust_error_pct": -3.822173381219618,
+      "measured_current_a": 17.1,
+      "model_current_a": 12.49867533893311,
+      "current_error_pct": -26.908331351268366,
+      "measured_input_power_w": 787.6
+    },
+    {
+      "throttle_pct": 60.0,
+      "measured_thrust_kgf": 6.364,
+      "model_thrust_kgf": 6.069298969072165,
+      "thrust_error_pct": -4.630751585918214,
+      "measured_current_a": 19.7,
+      "model_current_a": 13.582375512829046,
+      "current_error_pct": -31.05393140695916,
+      "measured_input_power_w": 907.1
+    },
+    {
+      "throttle_pct": 63.0,
+      "measured_thrust_kgf": 6.927,
+      "model_thrust_kgf": 6.553551546391753,
+      "thrust_error_pct": -5.391200427432463,
+      "measured_current_a": 22.5,
+      "model_current_a": 14.66607568672498,
+      "current_error_pct": -34.81744139233343,
+      "measured_input_power_w": 1035.0
+    },
+    {
+      "throttle_pct": 66.0,
+      "measured_thrust_kgf": 7.495,
+      "model_thrust_kgf": 7.03780412371134,
+      "thrust_error_pct": -6.100011691643226,
+      "measured_current_a": 25.5,
+      "model_current_a": 15.749775860620913,
+      "current_error_pct": -38.236173095604265,
+      "measured_input_power_w": 1171.4
+    },
+    {
+      "throttle_pct": 69.0,
+      "measured_thrust_kgf": 8.068,
+      "model_thrust_kgf": 7.522056701030928,
+      "thrust_error_pct": -6.76677366099494,
+      "measured_current_a": 28.6,
+      "model_current_a": 16.83347603451685,
+      "current_error_pct": -41.14169218700403,
+      "measured_input_power_w": 1316.8
+    },
+    {
+      "throttle_pct": 72.0,
+      "measured_thrust_kgf": 8.644,
+      "model_thrust_kgf": 8.006309278350514,
+      "thrust_error_pct": -7.377264248605808,
+      "measured_current_a": 32.0,
+      "model_current_a": 17.91717620841278,
+      "current_error_pct": -44.008824348710064,
+      "measured_input_power_w": 1470.6
+    },
+    {
+      "throttle_pct": 75.0,
+      "measured_thrust_kgf": 9.219,
+      "model_thrust_kgf": 8.490561855670103,
+      "thrust_error_pct": -7.90148762696492,
+      "measured_current_a": 35.5,
+      "model_current_a": 19.000876382308714,
+      "current_error_pct": -46.47640455687686,
+      "measured_input_power_w": 1632.5
+    },
+    {
+      "throttle_pct": 78.0,
+      "measured_thrust_kgf": 9.786,
+      "model_thrust_kgf": 8.97481443298969,
+      "thrust_error_pct": -8.289245524323618,
+      "measured_current_a": 39.2,
+      "model_current_a": 20.084576556204652,
+      "current_error_pct": -48.76383531580446,
+      "measured_input_power_w": 1800.5
+    },
+    {
+      "throttle_pct": 81.0,
+      "measured_thrust_kgf": 10.337,
+      "model_thrust_kgf": 9.45906701030928,
+      "thrust_error_pct": -8.493112021773431,
+      "measured_current_a": 42.9,
+      "model_current_a": 21.16827673010059,
+      "current_error_pct": -50.65669759883312,
+      "measured_input_power_w": 1971.2
+    },
+    {
+      "throttle_pct": 84.0,
+      "measured_thrust_kgf": 10.861,
+      "model_thrust_kgf": 9.943319587628865,
+      "thrust_error_pct": -8.449317856285198,
+      "measured_current_a": 46.6,
+      "model_current_a": 22.25197690399652,
+      "current_error_pct": -52.24897660086584,
+      "measured_input_power_w": 2140.4
+    },
+    {
+      "throttle_pct": 87.0,
+      "measured_thrust_kgf": 11.342,
+      "model_thrust_kgf": 10.427572164948455,
+      "thrust_error_pct": -8.062315597350956,
+      "measured_current_a": 50.1,
+      "model_current_a": 23.335677077892456,
+      "current_error_pct": -53.42180223973562,
+      "measured_input_power_w": 2301.3
+    },
+    {
+      "throttle_pct": 90.0,
+      "measured_thrust_kgf": 11.762,
+      "model_thrust_kgf": 10.911824742268042,
+      "thrust_error_pct": -7.228152165719759,
+      "measured_current_a": 53.2,
+      "model_current_a": 24.419377251788394,
+      "current_error_pct": -54.09891494024739,
+      "measured_input_power_w": 2445.1
+    },
+    {
+      "throttle_pct": 100.0,
+      "measured_thrust_kgf": 12.526,
+      "model_thrust_kgf": 12.526,
+      "thrust_error_pct": 0.0,
+      "measured_current_a": 58.0,
+      "model_current_a": 28.031711164774837,
+      "current_error_pct": -51.66946350900889,
+      "measured_input_power_w": 2663.7
+    }
+  ]
+}

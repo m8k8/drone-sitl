@@ -1,0 +1,97 @@
+{
+  "model_status": "provisional sensitivity model, not a validated G06 digital twin",
+  "upstream_commit": "fb773567896014da007bca58358704d4a0d8516f",
+  "frame": "X",
+  "defaults": "defaults.parm",
+  "empty_mass_kg": 13.4946,
+  "empty_mass_assumption": "Conditional published partial sum12.4946kg including separately counted tank, plus explicit1.0kg allowance for unresolved parts. This is a scenario, not measured or guaranteed upper/lower bound.",
+  "reference_mass_kg": 13.4946,
+  "water_density_kg_l": 1.0,
+  "sources": {
+    "propulsion": "https://www.hobbywing.com/en/products/x6-plus-g2",
+    "propulsion_table": "https://www.hobbywing.com/uploads/file/20251212/be8db6e8539e5b63271859811f66214a.pdf",
+    "frame_catalog": "https://c.effort-tech.com/yft/service/t9pfu2ax8fcwpyk2bxw2.pdf"
+  },
+  "patch_files": {
+    "libraries/SITL/SIM_Frame.h": {
+      "original_sha256": "d202efdbf3fd91ab42af2727a0f8458e4e508b25fd6b312d77f478ae424fa9be",
+      "patched_sha256": "7d3db5f79aa9905a538622ee7a78672a7b72949f3dce06ac78cd85d543c68d2c"
+    },
+    "libraries/SITL/SIM_Frame.cpp": {
+      "original_sha256": "3328bbea7796d91409a252574c3e389ffb7ca11f123a1446ebd1b104dc0c470f",
+      "patched_sha256": "3050420870b29545041e6cb541b60464efb2d1bfc7292f088783f727cfa2f20c"
+    }
+  },
+  "patch_sha256": "56d9bd28677a0e723cf01340a9f93b0e39d136a04a3bdf37f9dba1adf5619cfb",
+  "geometry_assumption": "Square X approximating official1172mm wheelbase, not exact rectangular G06 motor locations.",
+  "inertia_assumption": {
+    "propulsion_unit_mass_kg": 0.748,
+    "central_box_m": [
+      0.5,
+      0.35,
+      0.3
+    ],
+    "centered_payload_cylinder_radius_m": 0.15,
+    "centered_payload_cylinder_height_m": 0.22
+  },
+  "battery_assumption": {
+    "cells_series": 12,
+    "capacity_ah": 10,
+    "initial_voltage_v": 50.4,
+    "pack_resistance_ohm": 0.06,
+    "resistance_is_measured": false
+  },
+  "cases": [
+    {
+      "label": "payload-0l",
+      "model": "models/payload-0l.json",
+      "water_l": 0,
+      "gross_mass_kg": 13.4946,
+      "inertia_kg_m2": [
+        0.6997039576666665,
+        0.8112940826666666,
+        1.353459040333333
+      ]
+    },
+    {
+      "label": "payload-1l",
+      "model": "models/payload-1l.json",
+      "water_l": 1,
+      "gross_mass_kg": 14.4946,
+      "inertia_kg_m2": [
+        0.7093622909999998,
+        0.8209524159999999,
+        1.364709040333333
+      ]
+    },
+    {
+      "label": "payload-3l",
+      "model": "models/payload-3l.json",
+      "water_l": 3,
+      "gross_mass_kg": 16.4946,
+      "inertia_kg_m2": [
+        0.7286789576666665,
+        0.8402690826666666,
+        1.387209040333333
+      ]
+    },
+    {
+      "label": "payload-5l",
+      "model": "models/payload-5l.json",
+      "water_l": 5,
+      "gross_mass_kg": 18.4946,
+      "inertia_kg_m2": [
+        0.7479956243333331,
+        0.8595857493333332,
+        1.409709040333333
+      ]
+    }
+  ],
+  "limitations": [
+    "Tank/frame weight overlap unresolved; no actual empty mass",
+    "Estimated inertia, zero CG offset, no liquid slosh or structural flexibility",
+    "Fitted static thrust curve and linear power-per-thrust model, not manufacturer motor dynamics",
+    "Voltage scaling and battery resistance are assumptions, not an endurance validation",
+    "No pump flow,RTK correction,camera,rangefinder,obstacles or failures modeled"
+  ]
+}

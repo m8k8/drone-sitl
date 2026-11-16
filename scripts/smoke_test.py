@@ -35,6 +35,19 @@ class FlightCheck:
         self.target_system = None
         self.target_component = None
 
+    def send_controls(self):
+        self.link.mav.heartbeat_send(
+            mavutil.mavlink.MAV_TYPE_GCS,
+            mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+            0, 0, mavutil.mavlink.MAV_STATE_ACTIVE,
+        )
+        self.link.mav.rc_channels_override_send(
+            self.target_system, self.target_component,
+            1500, 1500, self.throttle, 1500,
+            65535, 65535, 65535, 65535,
+        )
+        self.last_send = time.monotonic()
+
     def receive(self):
         if self.process.poll() is not None:
             raise RuntimeError(f"SITL exited with code {self.process.returncode}")
@@ -42,17 +55,7 @@ class FlightCheck:
             raise TimeoutError("Flight check exceeded its 240 second deadline")
         now = time.monotonic()
         if self.target_system is not None and now - self.last_send >= 0.2:
-            self.link.mav.heartbeat_send(
-                mavutil.mavlink.MAV_TYPE_GCS,
-                mavutil.mavlink.MAV_AUTOPILOT_INVALID,
-                0, 0, mavutil.mavlink.MAV_STATE_ACTIVE,
-            )
-            self.link.mav.rc_channels_override_send(
-                self.target_system, self.target_component,
-                1500, 1500, self.throttle, 1500,
-                65535, 65535, 65535, 65535,
-            )
-            self.last_send = now
+            self.send_controls()
         message = self.link.recv_match(blocking=True, timeout=0.1)
         if message is None or message.get_type() == "BAD_DATA":
             return None
@@ -152,6 +155,45 @@ class FlightCheck:
         )
         self.summary["takeoff_altitude_m"] = position.relative_alt / 1000
         self.throttle = 1500
+        # Do not enter LOITER with the previous minimum-throttle input still
+        # active. At 5x speed, the periodic 0.2s wall-clock send can lag by 1s.
+        self.send_controls()
+        self.wait(
+            "Neutral throttle confirmed by RC_CHANNELS before LOITER",
+            lambda m: m.get_type() == "RC_CHANNELS" and m.chan3_raw == 1500 and
+            m.time_boot_ms >= position.time_boot_ms,
+            timeout=10,
+        )
+        stable_since_ms = None
+        last_position_ms = None
+
+        def settled(message):
+            nonlocal stable_since_ms, last_position_ms
+            if message.get_type() != "GLOBAL_POSITION_INT":
+                return False
+            stamp = message.time_boot_ms
+            # Only a continuous stream of increasing simulated timestamps
+            # counts toward the settling interval.
+            if last_position_ms is not None and not 0 < stamp - last_position_ms <= 500:
+                stable_since_ms = None
+            last_position_ms = stamp
+            if not 9500 <= message.relative_alt <= 10500 or abs(message.vz) >= 20:
+                stable_since_ms = None
+                return False
+            if stable_since_ms is None:
+                stable_since_ms = stamp
+            return stamp - stable_since_ms >= 2000
+
+        settled_position = self.wait(
+            "GUIDED settled at 9.5-10.5 m with vertical speed below 0.2 m/s for 2 simulated seconds",
+            settled,
+            timeout=30,
+        )
+        self.summary["pre_loiter_altitude_m"] = settled_position.relative_alt / 1000
+        self.summary["pre_loiter_vertical_speed_m_s"] = settled_position.vz / 100
+        self.summary["pre_loiter_stable_sim_seconds"] = (
+            settled_position.time_boot_ms - stable_since_ms
+        ) / 1000
         self.mode("LOITER")
         print("Checking LOITER altitude and position for 3 wall-clock seconds", flush=True)
         hold_start = time.monotonic()

@@ -1,0 +1,55 @@
+diff --git a/libraries/SITL/SIM_Frame.h b/libraries/SITL/SIM_Frame.h
+--- a/libraries/SITL/SIM_Frame.h
++++ b/libraries/SITL/SIM_Frame.h
+@@ -84,6 +84,9 @@
+         // model mass kg
+         float mass = 3.0;
+ 
++        // Optional fixed propulsion/drag calibration mass; zero preserves legacy behavior.
++        float referenceMass = 0.0;
++
+         // diameter of model
+         float diagonal_size = 0.35;
+ 
+diff --git a/libraries/SITL/SIM_Frame.cpp b/libraries/SITL/SIM_Frame.cpp
+--- a/libraries/SITL/SIM_Frame.cpp
++++ b/libraries/SITL/SIM_Frame.cpp
+@@ -489,6 +489,7 @@
+     json_search vars[] = {
+ #define FRAME_VAR(s) { #s, &model.s, VarType::FLOAT }
+         FRAME_VAR(mass),
++        FRAME_VAR(referenceMass),
+         FRAME_VAR(diagonal_size),
+         FRAME_VAR(refSpd),
+         FRAME_VAR(refAngle),
+@@ -588,12 +589,18 @@
+         load_frame_params(colon+1);
+     }
+     mass = model.mass;
+-
+-    const float drag_force = model.mass * GRAVITY_MSS * tanf(radians(model.refAngle));
++    const float reference_mass = model.referenceMass > 0 ? model.referenceMass : model.mass;
++    if (!is_positive(mass) || !is_positive(reference_mass) || model.referenceMass < 0) {
++        AP_HAL::panic("Invalid frame mass/referenceMass");
++    }
++    ::printf("G06 frame mass=%.6f referenceMass=%.6f\n", (double)mass, (double)reference_mass);
++    ::fflush(stdout);
++
++    const float drag_force = reference_mass * GRAVITY_MSS * tanf(radians(model.refAngle));
+ 
+     const float cos_tilt = cosf(radians(model.refAngle));
+     const float airspeed_bf = model.refSpd * cos_tilt;
+-    const float ref_thrust = model.mass * GRAVITY_MSS / cos_tilt;
++    const float ref_thrust = reference_mass * GRAVITY_MSS / cos_tilt;
+     float ref_air_density = get_air_density(model.refAlt);
+ 
+     const float momentum_drag = cos_tilt * model.mdrag_coef * airspeed_bf * sqrtf(ref_thrust * ref_air_density * model.disc_area);
+@@ -609,7 +616,7 @@
+ 
+     terminal_rotation_rate = model.refRotRate;
+ 
+-    float hover_thrust = mass * GRAVITY_MSS;
++    float hover_thrust = reference_mass * GRAVITY_MSS;
+     float hover_power = model.refCurrent * model.refVoltage;
+     float hover_velocity_out = 2 * hover_power / hover_thrust;
+     float effective_disc_area = hover_thrust / (0.5 * ref_air_density * sq(hover_velocity_out));
