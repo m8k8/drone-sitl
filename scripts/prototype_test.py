@@ -23,6 +23,7 @@ import time
 import flight_support as base
 from pymavlink import mavutil
 from scenarios import SCENARIOS, auto, terrain_following
+from scenarios.battery_failsafe import logs as battery_logs, scenario as battery_failsafe
 from scenarios.field import scenario as field
 from scenarios.flight import scenario as flight_scenario
 from scenarios.mission import scenario as mission
@@ -43,6 +44,10 @@ TERRAIN_SCENARIOS = {
     "planned_step_crossing": planned_step_crossing,
 }
 AUTO_SCENARIOS = {"mission", "field", *TERRAIN_SCENARIOS}
+BATTERY_SCENARIOS = {"battery_failsafe", "battery_failsafe_critical"}
+PAD_LANDING_ERROR_M = 1.0
+LOCAL_LANDING_ERROR_M = 6.0
+MIN_LOCAL_TOUCHDOWN_FROM_HOME_M = 5.0
 SCENARIO_RUNNERS = {
     "flight": flight_scenario.run,
     "mission": mission.run,
@@ -63,12 +68,12 @@ class NullWriter:
 
 
 class PrototypeFlight(base.FlightSupport):
-    def __init__(self, *args, scenario, expected_params, gazebo=None, terrain=None, terrain_settings=None, **kwargs):
+    def __init__(self, *args, scenario, expected_params, gazebo=None, terrain=None, scenario_settings=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.scenario, self.expected_params = scenario, expected_params
         self.gazebo = gazebo
         self.terrain = terrain
-        self.terrain_settings = terrain_settings
+        self.scenario_settings = scenario_settings
         self.sonar_position_z = 0.0
         self.mission_reached = []
         self.waypoints = []
@@ -191,11 +196,12 @@ class PrototypeFlight(base.FlightSupport):
             raise RuntimeError("Normal arm checks and finite battery required")
         if not int(self.parameters["LOG_BITMASK"]) & (1 << 4):
             raise RuntimeError("CTUN/RFND log bit must be enabled")
-        if self.terrain is not None:
-            for name, expected in self.terrain_settings.items():
+        if self.scenario_settings is not None:
+            for name, expected in self.scenario_settings.items():
                 if not math.isclose(self.parameter(name), expected, abs_tol=1e-5):
-                    raise RuntimeError(f"Unexpected terrain parameter {name}")
-            terrain_following.wait_for_terrain(self, self.terrain_settings["TERRAIN_SPACING"])
+                    raise RuntimeError(f"Unexpected scenario parameter {name}")
+        if self.terrain is not None:
+            terrain_following.wait_for_terrain(self, self.scenario_settings["TERRAIN_SPACING"])
         self.summary["initial_parameters"] = dict(self.parameters)
         truth, state = self.latest["SIMSTATE"], self.latest["SIM_STATE"]
         self.true_home = (truth.lat / 1e7, truth.lng / 1e7, state.alt)
@@ -232,33 +238,33 @@ class PrototypeFlight(base.FlightSupport):
             raise RuntimeError(f"{name}: physical model altitude outside 9..11 m")
         rangefinder.measurements(self, name, require_in_range=True)
 
-    def land(self, already_rtl=False):
-        self.target_ne = (0.0, 0.0)
-        if not already_rtl:
+    def land(self, expected_mode_name, *, command_rtl=False, target_ne=None, max_error_m=2.0):
+        self.target_ne = (0.0, 0.0) if target_ne is None else target_ne
+        if command_rtl:
             self.step("rtl_transition")
             self.set_mode("RTL")
-        self.step("rtl")
-        self.wait("RTL landing/disarm", lambda m: m.get_type() == "HEARTBEAT" and
+        phase = "land" if expected_mode_name == "LAND" else "rtl"
+        self.step(phase)
+        self.wait(f"{phase.upper()} landing/disarm", lambda m: m.get_type() == "HEARTBEAT" and
             not m.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED and
             abs(self.latest["GLOBAL_POSITION_INT"].relative_alt) < 1000 and self.fresh("EXTENDED_SYS_STATE") and
             self.latest["EXTENDED_SYS_STATE"].landed_state == mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND,
             sim_timeout=180, wall_timeout=90)
-        rtl_rows = [r for r in self.rows if r["phase"] == "rtl"]
-        expected_mode_name = "AUTO" if already_rtl else "RTL"
+        landing_rows = [r for r in self.rows if r["phase"] == phase]
         expected_mode = self.link.mode_mapping()[expected_mode_name]
-        if not rtl_rows:
-            raise RuntimeError("RTL phase has no position telemetry")
-        for row in rtl_rows:
+        if not landing_rows:
+            raise RuntimeError(f"{phase.upper()} phase has no position telemetry")
+        for row in landing_rows:
             if row["mode"] != expected_mode or row["heartbeat_age_s"] is None or row["heartbeat_age_s"] > 2:
                 raise RuntimeError(f"Return phase left {expected_mode_name} or has stale heartbeat")
             required = ("relative_alt_m", "true_lat_deg", "true_lon_deg", "true_altitude_relative_m", "true_sample_age_s")
             if any(row[k] is None or not math.isfinite(row[k]) for k in required) or row["true_sample_age_s"] > 1:
                 raise RuntimeError("Return phase has missing/nonfinite/stale simulator truth")
-        self.summary["metrics"]["rtl"] = {
-            "samples": len(rtl_rows), "expected_mode": expected_mode_name,
-            "observed_modes": sorted(set(r["mode"] for r in rtl_rows)),
-            "heartbeat_max_age_s": max(r["heartbeat_age_s"] for r in rtl_rows),
-            "truth_max_age_s": max(r["true_sample_age_s"] for r in rtl_rows),
+        self.summary["metrics"][phase] = {
+            "samples": len(landing_rows), "expected_mode": expected_mode_name,
+            "observed_modes": sorted(set(r["mode"] for r in landing_rows)),
+            "heartbeat_max_age_s": max(r["heartbeat_age_s"] for r in landing_rows),
+            "truth_max_age_s": max(r["true_sample_age_s"] for r in landing_rows),
         }
         self.step("landed")
         self.duration(1)
@@ -275,7 +281,15 @@ class PrototypeFlight(base.FlightSupport):
         self.summary["metrics"]["landing"] = landing
         if row["heartbeat_age_s"] is None or row["heartbeat_age_s"] > 2 or row["armed"] or row["landed_state"] != mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND:
             raise RuntimeError("Landing requires fresh normal disarm and on-ground state")
-        if abs(landing["truth_relative_alt_m"]) >= 1 or landing["estimated_home_error_m"] > 2 or landing["truth_home_error_m"] > 2:
+        if target_ne is None:
+            estimated_error, truth_error = landing["estimated_home_error_m"], landing["truth_home_error_m"]
+        else:
+            north, east = target_ne
+            estimated_error = math.hypot(row["north_m"] - north, row["east_m"] - east)
+            truth_error = math.hypot(row["true_north_m"] - north, row["true_east_m"] - east)
+            landing.update(target_ne_m=target_ne, truth_touchdown_ne_m=(row["true_north_m"], row["true_east_m"]),
+                           estimated_target_error_m=estimated_error, truth_target_error_m=truth_error)
+        if abs(landing["truth_relative_alt_m"]) >= 1 or max(estimated_error, truth_error) > max_error_m:
             raise RuntimeError("Landing position/height outside criteria")
         self.summary["metrics"]["flight"] = {"armed_sim_seconds": self.first_disarm_sim_s - self.first_arm_sim_s,
             "battery_consumed_mah": row["battery_consumed_mah"], "battery_voltage_final_v": row["battery_voltage_v"],
@@ -283,8 +297,23 @@ class PrototypeFlight(base.FlightSupport):
 
     def fly(self):
         self.prepare()
+        if self.scenario in BATTERY_SCENARIOS:
+            critical = self.scenario == "battery_failsafe_critical"
+            target_ne = battery_failsafe.run(self, critical=critical)
+            if critical:
+                if target_ne is None:
+                    raise RuntimeError("Missing critical battery LAND position")
+                self.land("LAND", target_ne=target_ne, max_error_m=LOCAL_LANDING_ERROR_M)
+                if self.summary["metrics"]["landing"]["truth_home_error_m"] < MIN_LOCAL_TOUCHDOWN_FROM_HOME_M:
+                    raise RuntimeError("Critical battery landing was too close to the launch pad")
+            else:
+                self.land("RTL", max_error_m=PAD_LANDING_ERROR_M)
+            return
         SCENARIO_RUNNERS[self.scenario](self)
-        self.land(already_rtl=self.scenario in AUTO_SCENARIOS)
+        if self.scenario in AUTO_SCENARIOS:
+            self.land("AUTO")
+        else:
+            self.land("RTL", command_rtl=True)
 
 
 def read_params(path):
@@ -317,6 +346,8 @@ def main():
         parser.error("Use instance 40..100, speedup >0..20, and a positive deadline")
     terrain_case = TERRAIN_SCENARIOS.get(args.scenario)
     terrain = terrain_case.create_terrain(args.home) if terrain_case is not None else None
+    battery_case = args.scenario in BATTERY_SCENARIOS
+    critical = args.scenario == "battery_failsafe_critical"
     launch_home = terrain.home if terrain is not None else args.home
     model_path, params_path, manifest_path = (p.resolve(strict=True) for p in (args.model, args.params, args.manifest))
     model, manifest = json.loads(model_path.read_text()), json.loads(manifest_path.read_text())
@@ -352,12 +383,13 @@ def main():
     for source in sorted((scripts / "scenarios").rglob("*.py")):
         snapshots[source.relative_to(scripts).as_posix()] = source
     defaults = "base.parm,experiment.parm"
-    terrain_settings = None
-    if terrain_case is not None:
-        terrain_params = terrain_case.PARAMS.relative_to(scripts).as_posix()
-        snapshots[terrain_params] = terrain_case.PARAMS
-        defaults += f",{terrain_params}"
-        terrain_settings = read_params(terrain_case.PARAMS)
+    scenario_module = battery_failsafe if battery_case else terrain_case
+    scenario_settings = None
+    if scenario_module is not None:
+        params_name = scenario_module.PARAMS.relative_to(scripts).as_posix()
+        snapshots[params_name] = scenario_module.PARAMS
+        defaults += f",{params_name}"
+        scenario_settings = read_params(scenario_module.PARAMS)
     if args.gazebo:
         for name in ("gazebo_view.py", "gazebo_bridge.py", "gazebo_world.py", "gazebo_pose_system.py"):
             snapshots[name] = scripts / name
@@ -389,7 +421,7 @@ def main():
         metadata[f"{prefix}_worktree_status"] = subprocess.check_output(["git", "-C", str(path), "status", "--porcelain"], text=True).splitlines()
         metadata[f"{prefix}_tracked_diff_sha256"] = hashlib.sha256(subprocess.check_output(["git", "-C", str(path), "diff", "HEAD", "--binary"])).hexdigest()
     mission_criteria = dict(auto.MISSION_CRITERIA)
-    if args.scenario not in {"field", *TERRAIN_SCENARIOS}:
+    if args.scenario not in {"field", *TERRAIN_SCENARIOS, *BATTERY_SCENARIOS}:
         mission_criteria["side_m"] = mission.SIDE_M
     if terrain_case is planned_step_crossing:
         mission_criteria["waypoint_altitude_tolerance_m"] = (
@@ -403,6 +435,14 @@ def main():
     if terrain_case is not None:
         criteria_key = "planned_step_crossing" if terrain_case is planned_step_crossing else "terrain_following"
         summary["criteria"][criteria_key] = terrain_case.CRITERIA
+    if battery_case:
+        summary["criteria"]["battery_failsafe"] = dict(battery_failsafe.CRITERIA)
+        if critical:
+            summary["criteria"]["return_mode"] = "RTL then LAND"
+            summary["criteria"]["battery_failsafe"].update(
+                max_touchdown_error_m=LOCAL_LANDING_ERROR_M, min_touchdown_from_home_m=MIN_LOCAL_TOUCHDOWN_FROM_HOME_M)
+        else:
+            summary["criteria"]["battery_failsafe"]["max_touchdown_error_m"] = PAD_LANDING_ERROR_M
     link = process = flight = gazebo = None
     completed = False
     started = time.monotonic()
@@ -435,7 +475,7 @@ def main():
                 terrain_step = (terrain.step_start_north_m, terrain.step_end_north_m)
                 step_height_m = terrain.step_height_m
             gazebo = GazeboView(run_dir, model, instance=args.instance, home=launch_home,
-                                field=args.scenario == "field" or terrain is not None,
+                                field=args.scenario == "field" or terrain is not None or battery_case,
                                 sloped=terrain_case is sloped_field, terrain_step=terrain_step, step_height_m=step_height_m)
             command.append("--enable-fgview")
             metadata["gazebo"].update(port=gazebo.port, partition=gazebo.partition)
@@ -449,7 +489,7 @@ def main():
                                        stderr=subprocess.STDOUT, start_new_session=True)
             flight = PrototypeFlight(link, process, csv_file, summary, args.wall_timeout, run_dir / "sitl.log", model,
                                      scenario=args.scenario, expected_params=read_params(params_path), gazebo=gazebo,
-                                     terrain=terrain, terrain_settings=terrain_settings)
+                                     terrain=terrain, scenario_settings=scenario_settings)
             flight.fly()
             if terrain_case is not None:
                 terrain_case.verify(flight, run_dir / "terrain-following.csv")
@@ -484,6 +524,8 @@ def main():
                                              "all_nonempty": True}
                 if args.scenario == "rangefinder":
                     rangefinder.verify_range_log(run_dir, summary)
+                if battery_case:
+                    battery_logs.verify(bin_logs, summary, critical=critical)
                 summary["result"] = "passed"
             except Exception as error:
                 summary["error"] = str(error) or type(error).__name__

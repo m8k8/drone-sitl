@@ -95,6 +95,8 @@ Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行し�
 ./scripts/prototype-test.sh --scenario sloped_field
 ./scripts/prototype-test.sh --scenario stepped_field
 ./scripts/prototype-test.sh --scenario planned_step_crossing
+./scripts/prototype-test.sh --scenario battery_failsafe
+./scripts/prototype-test.sh --scenario battery_failsafe_critical
 ./scripts/prototype-test.sh --scenario rangefinder
 ```
 
@@ -106,6 +108,8 @@ Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行し�
 | `sloped_field` | 緩い傾斜のある圃場をAUTOで上り下りし、対地高度10 mを保てるかを試験 |
 | `stepped_field` | 高さ1 mの段差をAUTOで3回横切り、最低対地高度と10 m付近への回復時間を測定 |
 | `planned_step_crossing` | 高さ10 mの段差を事前に高度を設定したAUTO航路で往復し、通過時の対地高度を測定 |
+| `battery_failsafe` | AUTO飛行中の低電圧でRTLに切り替わり、離陸地点に帰還・着陸するかを試験 |
+| `battery_failsafe_critical` | RTL中にさらに電圧が下がるとLANDに切り替わり、その地点付近に着陸するかを試験 |
 | `rangefinder` | 正常測距、1mの合成偏りへの応答、範囲外値での高度維持、測距復旧 |
 
 実験003と同じ11件（`flight`、`mission`、`rangefinder`を各3回、±0.5kgの基本飛行を各1回）を実行する場合は次を使います。
@@ -162,6 +166,19 @@ Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行し�
 ```bash
 ./scripts/prototype-test.sh --scenario planned_step_crossing
 ./scripts/prototype-test.sh --scenario planned_step_crossing --gazebo
+```
+
+### 圃場のバッテリーフェイルセーフ試験
+
+平坦な圃場でAUTO飛行中にSITLの模擬バッテリー電圧を下げ、ArduCopterがバッテリーフェイルセーフでモードを切り替えるかを確認します。`battery_failsafe` は低電圧でRTLに切り替わり、離陸地点のパッドへ帰還・着陸するケースです。`battery_failsafe_critical` はRTLで帰還している途中にさらに電圧を下げ、LANDに切り替わった地点付近で着陸するケースです。
+
+この試験では、負荷がかかった状態の電圧が42.0 V未満で2秒続くと低電圧、40.8 V未満で2秒続くと危険域と判定します。実行先の `summary.json` には機体ログで確認した切り替え理由と着陸位置の判定を、`telemetry.csv` には電圧と飛行モードの時系列を保存します。圃場と機体の動きは、それぞれの実行コマンドに `--gazebo` を付けると表示できます。
+
+```bash
+./scripts/prototype-test.sh --scenario battery_failsafe
+./scripts/prototype-test.sh --scenario battery_failsafe_critical
+./scripts/prototype-test.sh --scenario battery_failsafe --gazebo
+./scripts/prototype-test.sh --scenario battery_failsafe_critical --gazebo
 ```
 
 ### Gazeboで自動試験を見る

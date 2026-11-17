@@ -51,7 +51,7 @@ def _upload_mission(flight, points, altitude_frame, altitudes_m):
     raise TimeoutError("Mission upload did not complete")
 
 
-def run(flight, points, *, altitude_frame=HOME_RELATIVE, altitudes_m=None):
+def start(flight, points, *, altitude_frame=HOME_RELATIVE, altitudes_m=None):
     if altitudes_m is None:
         altitudes_m = (MISSION_CRITERIA["altitude_m"],) * len(points)
     flight.hover("hover_home")
@@ -63,7 +63,12 @@ def run(flight, points, *, altitude_frame=HOME_RELATIVE, altitudes_m=None):
     # performs the AUTO transition and starts/resumes the uploaded mission.
     flight.command(mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0)
     flight.wait("AUTO mission mode", lambda m: m.get_type() == "HEARTBEAT" and
-        m.custom_mode == flight.link.mode_mapping()["AUTO"])
+        m.custom_mode == flight.link.mode_mapping()["AUTO"] and
+        m.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
+
+
+def run(flight, points, *, altitude_frame=HOME_RELATIVE, altitudes_m=None):
+    start(flight, points, altitude_frame=altitude_frame, altitudes_m=altitudes_m)
     waypoint_seqs = {item["seq"] for item in flight.waypoints}
     rtl_seq = len(flight.waypoints) + 1
     flight.wait("AUTO waypoints and mission RTL item", lambda m: m.get_type() == "MISSION_CURRENT" and
