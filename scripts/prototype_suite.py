@@ -9,14 +9,15 @@ from pathlib import Path
 import subprocess
 import sys
 
+from scenarios import DEFAULT_SCENARIOS, SCENARIOS
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repeats", type=int, default=3)
-    parser.add_argument("--scenarios", nargs="+", choices=("flight", "mission", "rangefinder", "field"),
-                        default=["flight", "mission", "rangefinder"])
+    parser.add_argument("--scenarios", nargs="+", choices=SCENARIOS, default=list(DEFAULT_SCENARIOS))
     parser.add_argument("--no-mass-sensitivity", action="store_true")
     parser.add_argument("--sensitivity-repeats", type=int, default=1)
     parser.add_argument("--speedup", type=float, help="SITL speed (default: 5, or 1 with --gazebo)")

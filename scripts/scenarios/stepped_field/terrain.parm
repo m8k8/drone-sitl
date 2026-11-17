@@ -1,0 +1,7 @@
+# One-metre synthetic terrain grid, served from memory for the stepped field.
+SIM_TERRAIN 1
+TERRAIN_ENABLE 1
+TERRAIN_SPACING 1
+TERRAIN_OPTIONS 2
+TERRAIN_OFS_MAX 0
+WP_RFND_USE 1

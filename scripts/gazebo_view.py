@@ -8,6 +8,7 @@ import subprocess
 import uuid
 
 from gazebo_world import write_world
+from scenarios.stepped_field.terrain import STEP_HEIGHT_M
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,13 +39,17 @@ class GazeboView:
         if not all(os.access(GAZEBO_BIN / name, os.X_OK) for name in ("gz", "python")):
             raise RuntimeError("先に ./scripts/setup-gazebo.sh を実行してください。")
 
-    def __init__(self, run_dir, model, *, instance, home, field=False):
+    def __init__(self, run_dir, model, *, instance, home, field=False, sloped=False,
+                 terrain_step=None, step_height_m=STEP_HEIGHT_M):
         self.run_dir = run_dir.resolve()
         self.port = 5503 + 10 * instance
         self.partition = f"bd_{uuid.uuid4().hex}"
         self._model = model
         self._home = home
         self._field = field
+        self._sloped = sloped
+        self._terrain_step = terrain_step
+        self._step_height_m = step_height_m
         self._children = []
 
     def start(self):
@@ -64,7 +69,8 @@ class GazeboView:
 
     def _start_children(self, pose_fd):
         world = self.run_dir / "gazebo.sdf"
-        write_world(world, self._model, field=self._field)
+        write_world(world, self._model, field=self._field, sloped=self._sloped,
+                    terrain_step=self._terrain_step, step_height_m=self._step_height_m)
         prefix = GAZEBO_BIN.parent
         environment = os.environ.copy()
         environment["PATH"] = f"{GAZEBO_BIN}{os.pathsep}{environment.get('PATH', '')}"

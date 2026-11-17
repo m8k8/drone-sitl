@@ -92,6 +92,9 @@ Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行し�
 ./scripts/prototype-test.sh --scenario flight
 ./scripts/prototype-test.sh --scenario mission
 ./scripts/prototype-test.sh --scenario field
+./scripts/prototype-test.sh --scenario sloped_field
+./scripts/prototype-test.sh --scenario stepped_field
+./scripts/prototype-test.sh --scenario planned_step_crossing
 ./scripts/prototype-test.sh --scenario rangefinder
 ```
 
@@ -100,6 +103,9 @@ Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行し�
 | `flight` | 通常アーム、10m離陸、LOITER、北20m移動、RTL着陸・通常ディスアーム |
 | `mission` | 高度10mで20m四方のAUTO航路、4地点到達、ミッション内RTL |
 | `field` | 平坦な圃場の3列を高度10mでジグザグに飛ぶAUTO航路、6地点到達、ミッション内RTL |
+| `sloped_field` | 緩い傾斜のある圃場をAUTOで上り下りし、対地高度10 mを保てるかを試験 |
+| `stepped_field` | 高さ1 mの段差をAUTOで3回横切り、最低対地高度と10 m付近への回復時間を測定 |
+| `planned_step_crossing` | 高さ10 mの段差を事前に高度を設定したAUTO航路で往復し、通過時の対地高度を測定 |
 | `rangefinder` | 正常測距、1mの合成偏りへの応答、範囲外値での高度維持、測距復旧 |
 
 実験003と同じ11件（`flight`、`mission`、`rangefinder`を各3回、±0.5kgの基本飛行を各1回）を実行する場合は次を使います。
@@ -120,6 +126,42 @@ Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行し�
 
 ```bash
 ./scripts/prototype-suite.sh --scenarios field --no-mass-sensitivity
+```
+
+### 緩い傾斜のある圃場の対地高度試験
+
+`sloped_field`では、北へ20 m進むごとに地面が1 m高くなる斜面をAUTOで上り下りします。航路の目標は対地高度10 mで、6地点への飛行中は目標からのずれが±0.5 m以内なら高度の判定に合格します。SITLの模擬測距に合成地形を反映し、機体の真値高度から真下の地表高度を引いて対地高度を計算します。実行先の `summary.json` に判定と高度の範囲、`terrain-following.csv` に対地高度と測距の時系列を保存します。
+
+```bash
+./scripts/prototype-test.sh --scenario sloped_field
+```
+
+斜面と飛行の様子をGazeboで見る場合は、Gazebo Jettyをセットアップしてから次を実行します。
+
+```bash
+./scripts/prototype-test.sh --scenario sloped_field --gazebo
+```
+
+### 段差のある圃場の対地高度試験
+
+`stepped_field`では、地面が水平距離1 mの間に1 m高くなる段差を、目標対地高度10 mで上り、下り、上りの順に横切ります。各通過で機体の真下の地表から測った最低高度と、10 m付近へ戻るまでの時間を記録します。
+
+回復時間は、段差の移行区間に入ってから、通過後の対地高度が9.75〜10.25 mに1秒以上とどまった区間の始まりまでです。次の通過またはミッション終了までに回復しなければタイムアウトとします。`summary.json` に通過ごとの測定値と判定、`terrain-following.csv` に対地高度と測距の時系列を保存します。
+
+```bash
+./scripts/prototype-test.sh --scenario stepped_field
+./scripts/prototype-test.sh --scenario stepped_field --gazebo
+```
+
+### 高さ10 mの段差を越える計画航路
+
+`planned_step_crossing`では、地面が水平距離1 mの間に10 m高くなる圃場を、離陸地点からの相対高度を指定した6地点のAUTO航路で往復します。段差の手前で相対高度22 mまで上がり、段差を越えた直後は地面から約12 mを確保する計画です。高い側の点検地点では相対高度20 m、対地高度10 mで飛びます。帰路でも相対高度22 mで段差を越え、低い側で相対高度10 mに下がってからRTLで帰還します。
+
+段差の移行区間とその前後2 mで、対地高度11 m以上を合格条件にします。高い側の点検地点は10 m±0.5 mで判定します。`summary.json` に往復の最低対地高度と試験の判定、`terrain-following.csv` に飛行中の地表高度・対地高度・有効な測距の時系列を保存します。
+
+```bash
+./scripts/prototype-test.sh --scenario planned_step_crossing
+./scripts/prototype-test.sh --scenario planned_step_crossing --gazebo
 ```
 
 ### Gazeboで自動試験を見る
@@ -162,11 +204,14 @@ sitl/
 ├── config/prototype-01/  B〜Dの部品表・モデル・校正・パッチ
 ├── config/versions.env   ArduPilotの固定版
 ├── scripts/             準備・手動起動・自動試験・可視化
+│   └── scenarios/       シナリオごとの試験手順と共通AUTO処理
 ├── requirements-cli.txt
 ├── requirements-plots.txt
 ├── vendor/              ArduPilot依存ソース（Git管理対象外）
 ├── .venv/               実行用Python（Git管理対象外）
 └── runs/                B〜Dの設定状態・実行記録（Git管理対象外）
 ```
+
+各試験の手順は `scripts/scenarios/<シナリオ名>/scenario.py` にあります。`scripts/scenarios/auto.py` に航路の登録・実行に使う共通処理があります。圃場のGazebo表示は `scripts/scenarios/` 配下の表示コードで定義します。自動試験は使用したシナリオのコードを実行先の `scenarios/` に保存します。
 
 実行コードは[drone-sitl](https://github.com/m8k8/drone-sitl)、部品選定と実験資料は[drone-docs](https://github.com/m8k8/drone-docs)で別々に管理します。生ログ、依存環境、元の購入計画Excelは公開対象に含めません。

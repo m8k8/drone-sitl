@@ -15,15 +15,21 @@ import re
 import shutil
 import signal
 import socket
-import statistics
 import subprocess
 import sys
 import tempfile
 import time
 
-import field_scenario
 import flight_support as base
 from pymavlink import mavutil
+from scenarios import SCENARIOS, auto, terrain_following
+from scenarios.field import scenario as field
+from scenarios.flight import scenario as flight_scenario
+from scenarios.mission import scenario as mission
+from scenarios.planned_step_crossing import scenario as planned_step_crossing
+from scenarios.rangefinder import scenario as rangefinder
+from scenarios.sloped_field import scenario as sloped_field
+from scenarios.stepped_field import scenario as stepped_field
 
 ROOT, SOURCE = base.ROOT, base.SOURCE
 CONFIG = ROOT / "config/prototype-01"
@@ -31,22 +37,21 @@ SENSOR_FIELDS = ["distance_m", "distance_min_m", "distance_max_m", "distance_age
                  "distance_signal_quality", "laser_health_bit", "sonar_position_z_m",
                  "mission_seq"]
 base.CSV_FIELDS.extend(SENSOR_FIELDS)
-FLIGHT_CRITERIA = {**base.CRITERIA, "settle_sim_seconds": 8.0}
-RANGE_CRITERIA = {
-    "baseline_measure_s": 8, "response_settle_s": 12, "response_measure_s": 6,
-    "synthetic_position_step_m": 1.0, "step_altitude_change_m": [0.6, 1.4],
-    "return_altitude_error_max_m": 0.5, "out_of_range_position_z_m": -50.0,
-    "fallback_measure_s": 10, "fallback_altitude_change_max_m": 0.75,
-    "range_truth_error_max_m": 0.5, "range_max_age_s": 1.0,
-    "measurement_min_samples": 30, "horizontal_error_max_m": 2.0,
-    "log_min_samples_per_stream": 5,
+TERRAIN_SCENARIOS = {
+    "sloped_field": sloped_field,
+    "stepped_field": stepped_field,
+    "planned_step_crossing": planned_step_crossing,
 }
-MISSION_ROUTES = {
-    "mission": ((20, 0), (20, 20), (0, 20), (0, 0)),
-    "field": field_scenario.FIELD_WAYPOINTS_NE_M,
+AUTO_SCENARIOS = {"mission", "field", *TERRAIN_SCENARIOS}
+SCENARIO_RUNNERS = {
+    "flight": flight_scenario.run,
+    "mission": mission.run,
+    "rangefinder": rangefinder.run,
+    "field": field.run,
+    "sloped_field": terrain_following.run,
+    "stepped_field": terrain_following.run,
+    "planned_step_crossing": planned_step_crossing.run,
 }
-MISSION_CRITERIA = {"altitude_m": 10, "waypoint_truth_error_max_m": 2,
-                    "waypoint_altitude_bounds_m": [9, 11], "mission_timeout_sim_s": 240}
 EXTRA_PARAMETERS = ["SERIAL5_PROTOCOL", "SERIAL5_BAUD", "RNGFND1_MIN", "RNGFND1_MAX",
                     "RNGFND1_ORIENT", "RNGFND1_GNDCLR", "SURFTRAK_MODE",
                     "SIM_SONAR_POS_Z", "SIM_SONAR_RND", "LOG_BITMASK"]
@@ -58,10 +63,12 @@ class NullWriter:
 
 
 class PrototypeFlight(base.FlightSupport):
-    def __init__(self, *args, scenario, expected_params, gazebo=None, **kwargs):
+    def __init__(self, *args, scenario, expected_params, gazebo=None, terrain=None, terrain_settings=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.scenario, self.expected_params = scenario, expected_params
         self.gazebo = gazebo
+        self.terrain = terrain
+        self.terrain_settings = terrain_settings
         self.sonar_position_z = 0.0
         self.mission_reached = []
         self.waypoints = []
@@ -69,8 +76,12 @@ class PrototypeFlight(base.FlightSupport):
 
     def receive(self):
         message = super().receive()
-        if message is not None and message.get_type() == "MISSION_ITEM_REACHED":
+        if message is None:
+            return None
+        if message.get_type() == "MISSION_ITEM_REACHED":
             self.mission_reached.append({"seq": message.seq, "time_boot_s": self.sim_time})
+        if self.terrain is not None and message.get_type() == "TERRAIN_REQUEST":
+            self.terrain.reply(self.link.mav, message)
         return message
 
     def record(self, position):
@@ -155,6 +166,9 @@ class PrototypeFlight(base.FlightSupport):
                      "SYS_STATUS", "BATTERY_STATUS", "ATTITUDE", "EXTENDED_SYS_STATE", "DISTANCE_SENSOR", "MISSION_CURRENT"):
             self.command(mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
                          getattr(mavutil.mavlink, f"MAVLINK_MSG_ID_{name}"), 100000)
+        if self.terrain is not None:
+            for message_id in (mavutil.mavlink.MAVLINK_MSG_ID_TERRAIN_REQUEST, mavutil.mavlink.MAVLINK_MSG_ID_TERRAIN_REPORT):
+                self.command(mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, message_id, 500000)
         self.step("prearm")
         self.wait("GPS/EKF/normal pre-arm health", self.ready, sim_timeout=120, wall_timeout=60)
         self.wait("measurement streams", lambda _m: all(self.fresh(name) for name in
@@ -177,6 +191,11 @@ class PrototypeFlight(base.FlightSupport):
             raise RuntimeError("Normal arm checks and finite battery required")
         if not int(self.parameters["LOG_BITMASK"]) & (1 << 4):
             raise RuntimeError("CTUN/RFND log bit must be enabled")
+        if self.terrain is not None:
+            for name, expected in self.terrain_settings.items():
+                if not math.isclose(self.parameter(name), expected, abs_tol=1e-5):
+                    raise RuntimeError(f"Unexpected terrain parameter {name}")
+            terrain_following.wait_for_terrain(self, self.terrain_settings["TERRAIN_SPACING"])
         self.summary["initial_parameters"] = dict(self.parameters)
         truth, state = self.latest["SIMSTATE"], self.latest["SIM_STATE"]
         self.true_home = (truth.lat / 1e7, truth.lng / 1e7, state.alt)
@@ -202,7 +221,7 @@ class PrototypeFlight(base.FlightSupport):
             9500 <= m.relative_alt <= 10500, sim_timeout=60)
         self.set_mode("LOITER")
         self.step("settle_home")
-        self.duration(FLIGHT_CRITERIA["settle_sim_seconds"])
+        self.duration(flight_scenario.FLIGHT_CRITERIA["settle_sim_seconds"])
 
     def hover(self, name):
         super().hover(name)
@@ -211,184 +230,7 @@ class PrototypeFlight(base.FlightSupport):
         self.summary["metrics"][name].update({f"true_altitude_{key}_m": value for key, value in truth.items()})
         if truth["min"] < 9 or truth["max"] > 11:
             raise RuntimeError(f"{name}: physical model altitude outside 9..11 m")
-        self.range_measurements(name, require_in_range=True)
-
-    def range_measurements(self, name, require_in_range, duration=None):
-        if duration is not None:
-            self.step(name)
-            self.duration(duration)
-        rows = [r for r in self.rows if r["phase"] == name]
-        if len(rows) < RANGE_CRITERIA["measurement_min_samples"]:
-            raise RuntimeError(f"{name}: insufficient measurement samples")
-        for row in rows:
-            needed = ("relative_alt_m", "true_altitude_relative_m", "truth_horizontal_error_m",
-                      "distance_m", "distance_min_m", "distance_max_m", "distance_age_s", "tilt_deg")
-            if any(row[k] is None or not math.isfinite(row[k]) for k in needed):
-                raise RuntimeError(f"{name}: missing/nonfinite range or navigation data")
-            if row["distance_age_s"] > 1 or row["true_sample_age_s"] is None or row["true_sample_age_s"] > 1:
-                raise RuntimeError(f"{name}: stale sensor/truth data")
-            if row["heartbeat_age_s"] is None or row["heartbeat_age_s"] > 2 or not row["armed"] or row["mode"] != self.link.mode_mapping()["LOITER"]:
-                raise RuntimeError(f"{name}: needs fresh armed LOITER heartbeat")
-            if row["truth_horizontal_error_m"] > RANGE_CRITERIA["horizontal_error_max_m"]:
-                raise RuntimeError(f"{name}: horizontal position error > 2 m")
-            in_range = row["distance_min_m"] <= row["distance_m"] <= row["distance_max_m"]
-            if require_in_range != in_range:
-                raise RuntimeError(f"{name}: unexpected range validity")
-        result = {
-            "samples": len(rows), "start_s": rows[0]["time_boot_ms"] / 1000,
-            "end_s": rows[-1]["time_boot_ms"] / 1000,
-            "altitude_mean_m": statistics.fmean(r["relative_alt_m"] for r in rows),
-            "altitude_min_m": min(r["relative_alt_m"] for r in rows),
-            "altitude_max_m": max(r["relative_alt_m"] for r in rows),
-            "true_altitude_mean_m": statistics.fmean(r["true_altitude_relative_m"] for r in rows),
-            "true_altitude_min_m": min(r["true_altitude_relative_m"] for r in rows),
-            "true_altitude_max_m": max(r["true_altitude_relative_m"] for r in rows),
-            "distance_mean_m": statistics.fmean(r["distance_m"] for r in rows),
-            "distance_min_m": min(r["distance_m"] for r in rows),
-            "distance_max_m": max(r["distance_m"] for r in rows),
-            "truth_horizontal_error_max_m": max(r["truth_horizontal_error_m"] for r in rows),
-            "laser_health_bit_values": sorted(set(r["laser_health_bit"] for r in rows)),
-            "sensor_position_z_m": self.sonar_position_z,
-        }
-        self.summary["metrics"].setdefault("rangefinder", {})[name] = result
-        return result
-
-    def flight_scenario(self):
-        self.hover("hover_home")
-        self.step("north_transit")
-        self.set_mode("GUIDED")
-        self.target_ne = (20.0, 0.0)
-        lat = self.home[0] + math.degrees(20 / base.EARTH_RADIUS_M)
-        self.link.mav.set_position_target_global_int_send(int(self.sim_time * 1000), self.target_system,
-            self.target_component, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, 3576,
-            round(lat * 1e7), round(self.home[1] * 1e7), 10, 0, 0, 0, 0, 0, 0, 0, 0)
-        self.wait("20 m north waypoint", lambda m: m.get_type() == "GLOBAL_POSITION_INT" and
-            self.rows[-1]["estimated_horizontal_error_m"] <= 1 and 9000 <= m.relative_alt <= 11000,
-            sim_timeout=90)
-        self.set_mode("LOITER")
-        self.step("settle_north")
-        self.duration(FLIGHT_CRITERIA["settle_sim_seconds"])
-        self.hover("hover_north")
-
-    def upload_mission(self):
-        points = MISSION_ROUTES[self.scenario]
-        self.waypoints = [{"seq": i + 1, "north_m": n, "east_m": e} for i, (n, e) in enumerate(points)]
-        items = [(mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0)]
-        items += [(mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, n, e, MISSION_CRITERIA["altitude_m"], 2)
-                  for n, e in points]
-        items += [(mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0)]
-        self.link.mav.mission_count_send(self.target_system, self.target_component, len(items), 0)
-        requested = set()
-        start = time.monotonic()
-        while time.monotonic() - start < 30:
-            message = self.receive()
-            if message is None:
-                continue
-            if message.get_type() in ("MISSION_REQUEST_INT", "MISSION_REQUEST"):
-                if not 0 <= message.seq < len(items):
-                    raise RuntimeError(f"Invalid mission request {message.seq}")
-                cmd, north, east, alt, hold = items[message.seq]
-                lat = self.home[0] + math.degrees(north / base.EARTH_RADIUS_M)
-                lon = self.home[1] + math.degrees(east / (base.EARTH_RADIUS_M * math.cos(math.radians(self.home[0]))))
-                self.link.mav.mission_item_int_send(self.target_system, self.target_component,
-                    message.seq, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, cmd,
-                    0, 1, hold, 1 if cmd == mavutil.mavlink.MAV_CMD_NAV_WAYPOINT else 0,
-                    0, math.nan if cmd == mavutil.mavlink.MAV_CMD_NAV_WAYPOINT else 0,
-                    round(lat * 1e7), round(lon * 1e7), alt, 0)
-                requested.add(message.seq)
-            elif message.get_type() == "MISSION_ACK":
-                if message.type != mavutil.mavlink.MAV_MISSION_ACCEPTED or requested != set(range(len(items))):
-                    raise RuntimeError(f"Mission upload rejected/incomplete: {message.type}, requested={requested}")
-                self.summary["mission"] = {"items": [dict(seq=i, command=x[0], north_m=x[1], east_m=x[2], altitude_m=x[3], hold_s=x[4]) for i, x in enumerate(items)],
-                                           "upload_ack": message.type}
-                return
-        raise TimeoutError("Mission upload did not complete")
-
-    def mission_scenario(self):
-        self.hover("hover_home")
-        self.step("mission_upload")
-        self.upload_mission()
-        self.step("auto_mission")
-        # Copter 4.7.2 rejects nonzero first/last-item parameters. This command
-        # performs the AUTO transition and starts/resumes the uploaded mission.
-        self.command(mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0)
-        self.wait("AUTO mission mode", lambda m: m.get_type() == "HEARTBEAT" and
-            m.custom_mode == self.link.mode_mapping()["AUTO"])
-        waypoint_seqs = {item["seq"] for item in self.waypoints}
-        rtl_seq = len(self.waypoints) + 1
-        self.wait("AUTO waypoints and mission RTL item", lambda m: m.get_type() == "MISSION_CURRENT" and
-            m.seq == rtl_seq and waypoint_seqs.issubset({x["seq"] for x in self.mission_reached}),
-            sim_timeout=MISSION_CRITERIA["mission_timeout_sim_s"], wall_timeout=120)
-        self.summary["mission"]["reached"] = self.mission_reached
-        self.summary["mission"]["rtl_execution_note"] = (
-            f"Mission item {rtl_seq} is NAV_RETURN_TO_LAUNCH. "
-            "Copter runs the RTL submode while its flight mode remains AUTO."
-        )
-        self.summary["metrics"]["mission"] = {"waypoint_closest": self.waypoint_closest}
-        alt_min, alt_max = MISSION_CRITERIA["waypoint_altitude_bounds_m"]
-        for waypoint in self.waypoints:
-            seq = waypoint["seq"]
-            closest = self.waypoint_closest.get(seq)
-            if closest is None:
-                raise RuntimeError(f"AUTO waypoint {seq} has no true position sample")
-            if (closest["truth_error_m"] > MISSION_CRITERIA["waypoint_truth_error_max_m"] or
-                    not alt_min <= closest["relative_alt_m"] <= alt_max or
-                    not alt_min <= closest["true_altitude_relative_m"] <= alt_max or closest["true_sample_age_s"] > 1 or
-                    closest["heartbeat_age_s"] is None or closest["heartbeat_age_s"] > 2 or
-                    not closest["armed"] or closest["mode"] != self.link.mode_mapping()["AUTO"]):
-                raise RuntimeError(f"AUTO waypoint {seq} missed truth/altitude/mode criterion: {closest}")
-
-    def rangefinder_scenario(self):
-        baseline = self.range_measurements("range_baseline", True, 8)
-        rows = [r for r in self.rows if r["phase"] == "range_baseline"]
-        errors = [abs(r["distance_m"] * math.cos(math.radians(r["tilt_deg"])) - r["true_altitude_relative_m"]) for r in rows]
-        baseline["range_truth_error_max_m"] = max(errors)
-        if max(errors) > RANGE_CRITERIA["range_truth_error_max_m"] or not 9 <= baseline["altitude_mean_m"] <= 11:
-            raise RuntimeError("Baseline range/true height disagreement")
-        self.step("range_bias_injection")
-        self.set_parameter("SIM_SONAR_POS_Z", 1)
-        self.duration(12)
-        shifted = self.range_measurements("range_bias_response", True, 6)
-        delta = shifted["altitude_mean_m"] - baseline["altitude_mean_m"]
-        shifted["altitude_change_m"] = delta
-        truth_delta = shifted["true_altitude_mean_m"] - baseline["true_altitude_mean_m"]
-        shifted["true_altitude_change_m"] = truth_delta
-        if not 0.6 <= delta <= 1.4 or not 0.6 <= truth_delta <= 1.4:
-            raise RuntimeError(f"Surface tracking did not respond to 1 m synthetic range step: estimated={delta}, truth={truth_delta}")
-        self.step("range_bias_restore")
-        self.set_parameter("SIM_SONAR_POS_Z", 0)
-        self.duration(12)
-        restored = self.range_measurements("range_bias_restored", True, 6)
-        restored["altitude_change_m"] = restored["altitude_mean_m"] - baseline["altitude_mean_m"]
-        restored["true_altitude_change_m"] = restored["true_altitude_mean_m"] - baseline["true_altitude_mean_m"]
-        if abs(restored["altitude_change_m"]) > 0.5 or abs(restored["true_altitude_change_m"]) > 0.5:
-            raise RuntimeError("Surface tracking did not return after restoring range offset")
-        self.step("range_out_of_range_injection")
-        self.set_parameter("SIM_SONAR_POS_Z", -50)
-        self.wait("distance beyond configured maximum", lambda m: m.get_type() == "DISTANCE_SENSOR" and
-            m.current_distance > m.max_distance, sim_timeout=10)
-        self.duration(5)
-        fallback = self.range_measurements("range_out_of_range_hold", False, 10)
-        fallback["altitude_change_m"] = fallback["altitude_mean_m"] - restored["altitude_mean_m"]
-        fallback["true_altitude_change_m"] = fallback["true_altitude_mean_m"] - restored["true_altitude_mean_m"]
-        if max(abs(fallback["altitude_min_m"] - restored["altitude_mean_m"]),
-               abs(fallback["altitude_max_m"] - restored["altitude_mean_m"]),
-               abs(fallback["true_altitude_min_m"] - restored["true_altitude_mean_m"]),
-               abs(fallback["true_altitude_max_m"] - restored["true_altitude_mean_m"])) > 0.75:
-            raise RuntimeError("Altitude was not maintained after out-of-range readings")
-        self.step("range_recovery")
-        self.set_parameter("SIM_SONAR_POS_Z", 0)
-        self.wait("distance recovered within limits", lambda m: m.get_type() == "DISTANCE_SENSOR" and
-            m.min_distance <= m.current_distance <= m.max_distance, sim_timeout=10)
-        self.duration(8)
-        recovered = self.range_measurements("range_recovered_hold", True, 10)
-        recovered["altitude_change_m"] = recovered["altitude_mean_m"] - restored["altitude_mean_m"]
-        recovered["true_altitude_change_m"] = recovered["true_altitude_mean_m"] - restored["true_altitude_mean_m"]
-        if max(abs(recovered["altitude_min_m"] - restored["altitude_mean_m"]),
-               abs(recovered["altitude_max_m"] - restored["altitude_mean_m"]),
-               abs(recovered["true_altitude_min_m"] - restored["true_altitude_mean_m"]),
-               abs(recovered["true_altitude_max_m"] - restored["true_altitude_mean_m"])) > 0.75:
-            raise RuntimeError("Altitude jumped after range recovery")
+        rangefinder.measurements(self, name, require_in_range=True)
 
     def land(self, already_rtl=False):
         self.target_ne = (0.0, 0.0)
@@ -441,56 +283,8 @@ class PrototypeFlight(base.FlightSupport):
 
     def fly(self):
         self.prepare()
-        {"flight": self.flight_scenario, "mission": self.mission_scenario,
-         "field": self.mission_scenario, "rangefinder": self.rangefinder_scenario}[self.scenario]()
-        self.land(already_rtl=self.scenario in MISSION_ROUTES)
-
-
-def verify_range_log(run_dir, summary):
-    """Gate success on flight-controller states, not just GCS health-bit telemetry."""
-    files = sorted((run_dir / "logs").glob("*.BIN"))
-    if not files:
-        raise RuntimeError("Rangefinder test requires a DataFlash BIN log")
-    windows = summary["metrics"]["rangefinder"]
-    phases = ("range_baseline", "range_bias_response", "range_bias_restored", "range_out_of_range_hold", "range_recovered_hold")
-    evidence = {phase: {"RFND": [], "SURF": [], "CTUN": []} for phase in phases}
-    for file in files:
-        log = mavutil.mavlink_connection(str(file))
-        try:
-            while True:
-                message = log.recv_match(type=["RFND", "SURF", "CTUN"])
-                if message is None:
-                    break
-                timestamp = message.TimeUS / 1e6
-                for phase in phases:
-                    window = windows[phase]
-                    if window["start_s"] + 0.5 <= timestamp <= window["end_s"]:
-                        kind = message.get_type()
-                        if kind == "RFND" and message.Instance == 0:
-                            evidence[phase][kind].append(int(message.Stat))
-                        elif kind == "SURF" and message.I == 0:
-                            evidence[phase][kind].append(int(message.St))
-                        elif kind == "CTUN":
-                            evidence[phase][kind].append(math.isfinite(message.DSAlt))
-        finally:
-            log.close()
-    report = {}
-    for phase, values in evidence.items():
-        if any(len(v) < 5 for v in values.values()):
-            raise RuntimeError(f"{phase}: missing RFND/SURF/CTUN log evidence: { {k:len(v) for k,v in values.items()} }")
-        fault = phase == "range_out_of_range_hold"
-        report[phase] = {"sample_counts": {k: len(v) for k, v in values.items()},
-                         "RFND_Stat_values": sorted(set(values["RFND"])),
-                         "SURF_St_values": sorted(set(values["SURF"])),
-                         "CTUN_DSAlt_finite_fraction": sum(values["CTUN"]) / len(values["CTUN"])}
-        if fault:
-            good = all(v == 3 for v in values["RFND"]) and all(v & 2 for v in values["SURF"]) and not any(values["CTUN"])
-        else:
-            good = all(v == 4 for v in values["RFND"]) and all(v & 1 and not v & 2 for v in values["SURF"]) and all(values["CTUN"])
-        if not good:
-            summary["range_log_evidence"] = report
-            raise RuntimeError(f"{phase}: controller range status evidence did not match expected state: {report[phase]}")
-    summary["range_log_evidence"] = report
+        SCENARIO_RUNNERS[self.scenario](self)
+        self.land(already_rtl=self.scenario in AUTO_SCENARIOS)
 
 
 def read_params(path):
@@ -505,7 +299,7 @@ def read_params(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--scenario", choices=("flight", "mission", "rangefinder", "field"), default="flight")
+    parser.add_argument("--scenario", choices=SCENARIOS, default="flight")
     parser.add_argument("--model", type=Path, default=CONFIG / "models/nominal.json")
     parser.add_argument("--params", type=Path, default=CONFIG / "defaults.parm")
     parser.add_argument("--manifest", type=Path, default=CONFIG / "manifest.json")
@@ -521,6 +315,9 @@ def main():
         args.speedup = 1 if args.gazebo else 5
     if not 40 <= args.instance <= 100 or not 0 < args.speedup <= 20 or args.wall_timeout <= 0:
         parser.error("Use instance 40..100, speedup >0..20, and a positive deadline")
+    terrain_case = TERRAIN_SCENARIOS.get(args.scenario)
+    terrain = terrain_case.create_terrain(args.home) if terrain_case is not None else None
+    launch_home = terrain.home if terrain is not None else args.home
     model_path, params_path, manifest_path = (p.resolve(strict=True) for p in (args.model, args.params, args.manifest))
     model, manifest = json.loads(model_path.read_text()), json.loads(manifest_path.read_text())
     cases = [case for case in manifest["cases"] if (manifest_path.parent / case["model"]).resolve() == model_path]
@@ -550,11 +347,20 @@ def main():
         run_dir = Path(tempfile.mkdtemp(prefix="prototype-", dir=ROOT / "runs"))
     source_base = SOURCE / "Tools/autotest/default_params/copter.parm"
     snapshots = {"model.json": model_path, "experiment.parm": params_path, "base.parm": source_base,
-                 "manifest.json": manifest_path, "runner.py": Path(__file__), "flight_support.py": Path(base.__file__),
-                 "field_scenario.py": Path(field_scenario.__file__)}
+                 "manifest.json": manifest_path, "runner.py": Path(__file__), "flight_support.py": Path(base.__file__)}
+    scripts = ROOT / "scripts"
+    for source in sorted((scripts / "scenarios").rglob("*.py")):
+        snapshots[source.relative_to(scripts).as_posix()] = source
+    defaults = "base.parm,experiment.parm"
+    terrain_settings = None
+    if terrain_case is not None:
+        terrain_params = terrain_case.PARAMS.relative_to(scripts).as_posix()
+        snapshots[terrain_params] = terrain_case.PARAMS
+        defaults += f",{terrain_params}"
+        terrain_settings = read_params(terrain_case.PARAMS)
     if args.gazebo:
         for name in ("gazebo_view.py", "gazebo_bridge.py", "gazebo_world.py", "gazebo_pose_system.py"):
-            snapshots[name] = ROOT / "scripts" / name
+            snapshots[name] = scripts / name
     for key in ("components", "mass_properties", "propulsion_parameters", "calibration", "reference_mass_patch"):
         source = (manifest_path.parent / manifest[key]).resolve(strict=True)
         snapshots[source.name] = source
@@ -564,26 +370,39 @@ def main():
     if base.sha256(snapshots["reference-mass.patch"]) != manifest["patch_sha256"]:
         raise SystemExit("Propulsion patch checksum differs from the manifest")
     for name, source in snapshots.items():
-        shutil.copy2(source, run_dir / name)
+        destination = run_dir / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
     metadata = {"label": args.label, "scenario": args.scenario, "case": cases[0]["label"],
                 "started_utc": datetime.now(timezone.utc).isoformat(), "actual_mass_kg": model["mass"],
                 "reference_mass_kg": model["referenceMass"], "model_parameters": model,
                 "input_sha256": {name: base.sha256(path) for name, path in snapshots.items()},
                 "binary_sha256": base.sha256(binary), "project_commit": base.git_head(ROOT),
                 "ardupilot_commit": base.git_head(SOURCE), "platform": platform.platform(),
-                "python": platform.python_version(), "instance": args.instance, "speedup": args.speedup, "home": args.home,
+                "python": platform.python_version(), "instance": args.instance, "speedup": args.speedup, "home": launch_home,
                 "measurement_note": "Latest asynchronous SIMSTATE horizontal position and SIM_STATE altitude, with ages. Range backend data is not an optical TF02-Pro digital twin. Synthetic sensor-position shifts inject measurement bias/out-of-range without changing geometry or terrain."}
+    if terrain is not None:
+        metadata["requested_home"] = args.home
+        metadata["terrain"] = {**terrain_case.terrain_details(terrain),
+                               "terrain_height_at_launch_amsl_m": terrain.home_alt_m}
     for prefix, path in (("project", ROOT), ("ardupilot", SOURCE)):
         metadata[f"{prefix}_worktree_status"] = subprocess.check_output(["git", "-C", str(path), "status", "--porcelain"], text=True).splitlines()
         metadata[f"{prefix}_tracked_diff_sha256"] = hashlib.sha256(subprocess.check_output(["git", "-C", str(path), "diff", "HEAD", "--binary"])).hexdigest()
-    mission_criteria = dict(MISSION_CRITERIA)
-    if args.scenario != "field":
-        mission_criteria["side_m"] = 20
+    mission_criteria = dict(auto.MISSION_CRITERIA)
+    if args.scenario not in {"field", *TERRAIN_SCENARIOS}:
+        mission_criteria["side_m"] = mission.SIDE_M
+    if terrain_case is planned_step_crossing:
+        mission_criteria["waypoint_altitude_tolerance_m"] = (
+            mission_criteria.pop("waypoint_altitude_bounds_m")[1] - mission_criteria.pop("altitude_m"))
     summary = {"label": args.label, "scenario": args.scenario, "case": cases[0]["label"], "result": "failed",
-               "criteria": {"flight": FLIGHT_CRITERIA, "rangefinder": RANGE_CRITERIA, "mission": mission_criteria},
+               "criteria": {"flight": flight_scenario.FLIGHT_CRITERIA, "rangefinder": rangefinder.RANGE_CRITERIA,
+                            "mission": mission_criteria},
                "completed_steps": [], "events": [], "recent_status_text": [], "metrics": {}}
-    summary["criteria"]["return_mode"] = "AUTO" if args.scenario in MISSION_ROUTES else "RTL"
+    summary["criteria"]["return_mode"] = "AUTO" if args.scenario in AUTO_SCENARIOS else "RTL"
     summary["criteria"]["requires_nonempty_dataflash_log"] = True
+    if terrain_case is not None:
+        criteria_key = "planned_step_crossing" if terrain_case is planned_step_crossing else "terrain_following"
+        summary["criteria"][criteria_key] = terrain_case.CRITERIA
     link = process = flight = gazebo = None
     completed = False
     started = time.monotonic()
@@ -604,13 +423,20 @@ def main():
         link = mavutil.mavlink_connection("udpin:127.0.0.1:0", source_system=255, source_component=190)
         port = link.port.getsockname()[1]
         command = [str(binary), "-I", str(args.instance), "--model", "X:model.json", "--speedup", str(args.speedup),
-                   "--home", args.home, "--defaults", "base.parm,experiment.parm", "--serial0", f"udpclient:127.0.0.1:{port}"]
+                   "--home", launch_home, "--defaults", defaults, "--serial0", f"udpclient:127.0.0.1:{port}"]
         launch_args = manifest.get("launch_args", ["--serial5=sim:benewake_tf03"])
         if launch_args != ["--serial5=sim:benewake_tf03"]:
             raise RuntimeError(f"Unexpected rangefinder launch arguments: {launch_args}")
         command.extend(launch_args)
         if args.gazebo:
-            gazebo = GazeboView(run_dir, model, instance=args.instance, home=args.home, field=args.scenario == "field")
+            terrain_step = None
+            step_height_m = 1
+            if terrain_case in {stepped_field, planned_step_crossing}:
+                terrain_step = (terrain.step_start_north_m, terrain.step_end_north_m)
+                step_height_m = terrain.step_height_m
+            gazebo = GazeboView(run_dir, model, instance=args.instance, home=launch_home,
+                                field=args.scenario == "field" or terrain is not None,
+                                sloped=terrain_case is sloped_field, terrain_step=terrain_step, step_height_m=step_height_m)
             command.append("--enable-fgview")
             metadata["gazebo"].update(port=gazebo.port, partition=gazebo.partition)
         metadata["command"] = command
@@ -622,8 +448,11 @@ def main():
             process = subprocess.Popen(command, cwd=run_dir, stdin=subprocess.DEVNULL, stdout=log,
                                        stderr=subprocess.STDOUT, start_new_session=True)
             flight = PrototypeFlight(link, process, csv_file, summary, args.wall_timeout, run_dir / "sitl.log", model,
-                                     scenario=args.scenario, expected_params=read_params(params_path), gazebo=gazebo)
+                                     scenario=args.scenario, expected_params=read_params(params_path), gazebo=gazebo,
+                                     terrain=terrain, terrain_settings=terrain_settings)
             flight.fly()
+            if terrain_case is not None:
+                terrain_case.verify(flight, run_dir / "terrain-following.csv")
         completed = True
     except (Exception, KeyboardInterrupt) as error:
         summary["error"] = str(error) or type(error).__name__
@@ -654,7 +483,7 @@ def main():
                 summary["log_validation"] = {"files": len(bin_logs), "total_bytes": sum(p.stat().st_size for p in bin_logs),
                                              "all_nonempty": True}
                 if args.scenario == "rangefinder":
-                    verify_range_log(run_dir, summary)
+                    rangefinder.verify_range_log(run_dir, summary)
                 summary["result"] = "passed"
             except Exception as error:
                 summary["error"] = str(error) or type(error).__name__
