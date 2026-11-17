@@ -28,5 +28,5 @@ fi
   --prefix "$gazebo_prefix" --override-channels --channel conda-forge \
   'python=3.12' 'gz-jetty=1.*' 'gz-transport-python=15.*' 'gz-msgs-python=12.*'
 
-"$gazebo_prefix/bin/python" -c 'from gz.transport import Node; from gz.msgs.pose_pb2 import Pose'
+"$gazebo_prefix/bin/python" -c 'from gz.transport import Node; from gz.msgs.pose_pb2 import Pose; from gz.sim import Model; assert hasattr(Model, "set_world_pose_cmd")'
 echo 'Gazebo Jetty を準備しました。./scripts/run.sh --gazebo で起動できます。'

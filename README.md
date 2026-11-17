@@ -91,6 +91,7 @@ Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行し�
 ```bash
 ./scripts/prototype-test.sh --scenario flight
 ./scripts/prototype-test.sh --scenario mission
+./scripts/prototype-test.sh --scenario field
 ./scripts/prototype-test.sh --scenario rangefinder
 ```
 
@@ -98,9 +99,10 @@ Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行し�
 | --- | --- |
 | `flight` | 通常アーム、10m離陸、LOITER、北20m移動、RTL着陸・通常ディスアーム |
 | `mission` | 高度10mで20m四方のAUTO航路、4地点到達、ミッション内RTL |
+| `field` | 平坦な圃場の3列を高度10mでジグザグに飛ぶAUTO航路、6地点到達、ミッション内RTL |
 | `rangefinder` | 正常測距、1mの合成偏りへの応答、範囲外値での高度維持、測距復旧 |
 
-全11件（上記各3回と±0.5kgの基本飛行各1回）を実行する場合は次を使います。
+実験003と同じ11件（`flight`、`mission`、`rangefinder`を各3回、±0.5kgの基本飛行を各1回）を実行する場合は次を使います。
 
 ```bash
 ./scripts/prototype-suite.sh --repeats 3
@@ -110,15 +112,25 @@ Apple SiliconのMacでは、初回に `./scripts/setup-gazebo.sh` を実行し�
 
 2026-11-16の本試験は11/11成功し、`runs/prototype-final-20261116/`に保持しています。成功は記録したモデル・判定条件に対するもので、実機性能の保証ではありません。[試験条件と結果](https://github.com/m8k8/drone-docs/blob/main/sitl/experiments/003-prototype-bd/README.md)
 
+### 平坦な圃場の往復航路
+
+`field`は既定で無風の条件を使い、圃場脇から離陸したあと、基準機が離陸地点からの相対高度10mで3列をジグザグに飛びます。1列は24m、列間は8mです。各地点で2秒待機した後、最後の指示で離陸地点へ帰還し、着陸してディスアームします。6地点の到達と着地位置は実行先の`summary.json`で、飛行軌跡は`telemetry.csv`で確認できます。
+
+基準機でこのシナリオを繰り返す場合は、次を使います。
+
+```bash
+./scripts/prototype-suite.sh --scenarios field --no-mass-sensitivity
+```
+
 ### Gazeboで自動試験を見る
 
 Gazebo Jettyのセットアップ後、次のコマンドだけで自動試験用のSITLとGazeboウィンドウが開きます。`run.sh --gazebo` で手動飛行用のウィンドウを開いている場合は、別のウィンドウに試験機が表示されます。
 
 ```bash
-./scripts/prototype-test.sh --scenario mission --gazebo
+./scripts/prototype-test.sh --scenario field --gazebo
 ```
 
-離陸から帰還・着陸までスクリプトが操作します。`flight` と `rangefinder` にも `--gazebo` を付けられます。シミュレーション速度の既定値は `--gazebo` 付きで1倍速、通常の自動試験で5倍速です。試験用のGazeboは各試験の終了時に閉じます。出力先には判定結果 `summary.json` と描画側のログ `gazebo-*.log` が残ります。
+`field`では圃場と離着陸地点を表示します。Gazeboは表示専用で、飛行・測距・接地はSITLが計算します。`flight`、`mission`、`rangefinder`にも`--gazebo`を付けられます。シミュレーション速度の既定値は `--gazebo` 付きで1倍速、通常の自動試験で5倍速です。試験用のGazeboは各試験の終了時に閉じます。出力先には判定結果 `summary.json` と描画側のログ `gazebo-*.log` が残ります。
 
 `prototype-suite.sh` でも `--gazebo` を指定できます。各試験が専用のGazeboウィンドウを開きます。
 

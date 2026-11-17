@@ -21,6 +21,7 @@ import sys
 import tempfile
 import time
 
+import field_scenario
 import flight_support as base
 from pymavlink import mavutil
 
@@ -40,7 +41,11 @@ RANGE_CRITERIA = {
     "measurement_min_samples": 30, "horizontal_error_max_m": 2.0,
     "log_min_samples_per_stream": 5,
 }
-MISSION_CRITERIA = {"side_m": 20, "altitude_m": 10, "waypoint_truth_error_max_m": 2,
+MISSION_ROUTES = {
+    "mission": ((20, 0), (20, 20), (0, 20), (0, 0)),
+    "field": field_scenario.FIELD_WAYPOINTS_NE_M,
+}
+MISSION_CRITERIA = {"altitude_m": 10, "waypoint_truth_error_max_m": 2,
                     "waypoint_altitude_bounds_m": [9, 11], "mission_timeout_sim_s": 240}
 EXTRA_PARAMETERS = ["SERIAL5_PROTOCOL", "SERIAL5_BAUD", "RNGFND1_MIN", "RNGFND1_MAX",
                     "RNGFND1_ORIENT", "RNGFND1_GNDCLR", "SURFTRAK_MODE",
@@ -266,10 +271,11 @@ class PrototypeFlight(base.FlightSupport):
         self.hover("hover_north")
 
     def upload_mission(self):
-        points = [(20, 0), (20, 20), (0, 20), (0, 0)]
+        points = MISSION_ROUTES[self.scenario]
         self.waypoints = [{"seq": i + 1, "north_m": n, "east_m": e} for i, (n, e) in enumerate(points)]
         items = [(mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0)]
-        items += [(mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, n, e, 10, 2) for n, e in points]
+        items += [(mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, n, e, MISSION_CRITERIA["altitude_m"], 2)
+                  for n, e in points]
         items += [(mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0)]
         self.link.mav.mission_count_send(self.target_system, self.target_component, len(items), 0)
         requested = set()
@@ -308,20 +314,26 @@ class PrototypeFlight(base.FlightSupport):
         self.command(mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0)
         self.wait("AUTO mission mode", lambda m: m.get_type() == "HEARTBEAT" and
             m.custom_mode == self.link.mode_mapping()["AUTO"])
-        self.wait("AUTO rectangle and mission RTL item", lambda m: m.get_type() == "MISSION_CURRENT" and
-            m.seq == 5 and {1, 2, 3, 4}.issubset({x["seq"] for x in self.mission_reached}),
+        waypoint_seqs = {item["seq"] for item in self.waypoints}
+        rtl_seq = len(self.waypoints) + 1
+        self.wait("AUTO waypoints and mission RTL item", lambda m: m.get_type() == "MISSION_CURRENT" and
+            m.seq == rtl_seq and waypoint_seqs.issubset({x["seq"] for x in self.mission_reached}),
             sim_timeout=MISSION_CRITERIA["mission_timeout_sim_s"], wall_timeout=120)
         self.summary["mission"]["reached"] = self.mission_reached
-        self.summary["mission"]["rtl_execution_note"] = "Mission item 5 is NAV_RETURN_TO_LAUNCH. Copter runs the RTL submode while its flight mode remains AUTO."
+        self.summary["mission"]["rtl_execution_note"] = (
+            f"Mission item {rtl_seq} is NAV_RETURN_TO_LAUNCH. "
+            "Copter runs the RTL submode while its flight mode remains AUTO."
+        )
         self.summary["metrics"]["mission"] = {"waypoint_closest": self.waypoint_closest}
-        reached = {x["seq"] for x in self.mission_reached}
+        alt_min, alt_max = MISSION_CRITERIA["waypoint_altitude_bounds_m"]
         for waypoint in self.waypoints:
             seq = waypoint["seq"]
             closest = self.waypoint_closest.get(seq)
-            if seq not in reached or closest is None:
-                raise RuntimeError(f"AUTO waypoint {seq} was not confirmed reached")
-            if (closest["truth_error_m"] > 2 or not 9 <= closest["relative_alt_m"] <= 11 or
-                    not 9 <= closest["true_altitude_relative_m"] <= 11 or closest["true_sample_age_s"] > 1 or
+            if closest is None:
+                raise RuntimeError(f"AUTO waypoint {seq} has no true position sample")
+            if (closest["truth_error_m"] > MISSION_CRITERIA["waypoint_truth_error_max_m"] or
+                    not alt_min <= closest["relative_alt_m"] <= alt_max or
+                    not alt_min <= closest["true_altitude_relative_m"] <= alt_max or closest["true_sample_age_s"] > 1 or
                     closest["heartbeat_age_s"] is None or closest["heartbeat_age_s"] > 2 or
                     not closest["armed"] or closest["mode"] != self.link.mode_mapping()["AUTO"]):
                 raise RuntimeError(f"AUTO waypoint {seq} missed truth/altitude/mode criterion: {closest}")
@@ -430,8 +442,8 @@ class PrototypeFlight(base.FlightSupport):
     def fly(self):
         self.prepare()
         {"flight": self.flight_scenario, "mission": self.mission_scenario,
-         "rangefinder": self.rangefinder_scenario}[self.scenario]()
-        self.land(already_rtl=self.scenario == "mission")
+         "field": self.mission_scenario, "rangefinder": self.rangefinder_scenario}[self.scenario]()
+        self.land(already_rtl=self.scenario in MISSION_ROUTES)
 
 
 def verify_range_log(run_dir, summary):
@@ -493,7 +505,7 @@ def read_params(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--scenario", choices=("flight", "mission", "rangefinder"), default="flight")
+    parser.add_argument("--scenario", choices=("flight", "mission", "rangefinder", "field"), default="flight")
     parser.add_argument("--model", type=Path, default=CONFIG / "models/nominal.json")
     parser.add_argument("--params", type=Path, default=CONFIG / "defaults.parm")
     parser.add_argument("--manifest", type=Path, default=CONFIG / "manifest.json")
@@ -538,9 +550,10 @@ def main():
         run_dir = Path(tempfile.mkdtemp(prefix="prototype-", dir=ROOT / "runs"))
     source_base = SOURCE / "Tools/autotest/default_params/copter.parm"
     snapshots = {"model.json": model_path, "experiment.parm": params_path, "base.parm": source_base,
-                 "manifest.json": manifest_path, "runner.py": Path(__file__), "flight_support.py": Path(base.__file__)}
+                 "manifest.json": manifest_path, "runner.py": Path(__file__), "flight_support.py": Path(base.__file__),
+                 "field_scenario.py": Path(field_scenario.__file__)}
     if args.gazebo:
-        for name in ("gazebo_view.py", "gazebo_bridge.py", "gazebo_world.py"):
+        for name in ("gazebo_view.py", "gazebo_bridge.py", "gazebo_world.py", "gazebo_pose_system.py"):
             snapshots[name] = ROOT / "scripts" / name
     for key in ("components", "mass_properties", "propulsion_parameters", "calibration", "reference_mass_patch"):
         source = (manifest_path.parent / manifest[key]).resolve(strict=True)
@@ -563,10 +576,13 @@ def main():
     for prefix, path in (("project", ROOT), ("ardupilot", SOURCE)):
         metadata[f"{prefix}_worktree_status"] = subprocess.check_output(["git", "-C", str(path), "status", "--porcelain"], text=True).splitlines()
         metadata[f"{prefix}_tracked_diff_sha256"] = hashlib.sha256(subprocess.check_output(["git", "-C", str(path), "diff", "HEAD", "--binary"])).hexdigest()
+    mission_criteria = dict(MISSION_CRITERIA)
+    if args.scenario != "field":
+        mission_criteria["side_m"] = 20
     summary = {"label": args.label, "scenario": args.scenario, "case": cases[0]["label"], "result": "failed",
-               "criteria": {"flight": FLIGHT_CRITERIA, "rangefinder": RANGE_CRITERIA, "mission": MISSION_CRITERIA},
+               "criteria": {"flight": FLIGHT_CRITERIA, "rangefinder": RANGE_CRITERIA, "mission": mission_criteria},
                "completed_steps": [], "events": [], "recent_status_text": [], "metrics": {}}
-    summary["criteria"]["return_mode"] = "AUTO" if args.scenario == "mission" else "RTL"
+    summary["criteria"]["return_mode"] = "AUTO" if args.scenario in MISSION_ROUTES else "RTL"
     summary["criteria"]["requires_nonempty_dataflash_log"] = True
     link = process = flight = gazebo = None
     completed = False
@@ -594,7 +610,7 @@ def main():
             raise RuntimeError(f"Unexpected rangefinder launch arguments: {launch_args}")
         command.extend(launch_args)
         if args.gazebo:
-            gazebo = GazeboView(run_dir, model, instance=args.instance, home=args.home)
+            gazebo = GazeboView(run_dir, model, instance=args.instance, home=args.home, field=args.scenario == "field")
             command.append("--enable-fgview")
             metadata["gazebo"].update(port=gazebo.port, partition=gazebo.partition)
         metadata["command"] = command

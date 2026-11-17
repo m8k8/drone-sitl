@@ -38,12 +38,13 @@ class GazeboView:
         if not all(os.access(GAZEBO_BIN / name, os.X_OK) for name in ("gz", "python")):
             raise RuntimeError("先に ./scripts/setup-gazebo.sh を実行してください。")
 
-    def __init__(self, run_dir, model, *, instance, home):
+    def __init__(self, run_dir, model, *, instance, home, field=False):
         self.run_dir = run_dir.resolve()
         self.port = 5503 + 10 * instance
         self.partition = f"bd_{uuid.uuid4().hex}"
         self._model = model
         self._home = home
+        self._field = field
         self._children = []
 
     def start(self):
@@ -63,10 +64,12 @@ class GazeboView:
 
     def _start_children(self, pose_fd):
         world = self.run_dir / "gazebo.sdf"
-        write_world(world, self._model)
+        write_world(world, self._model, field=self._field)
         prefix = GAZEBO_BIN.parent
         environment = os.environ.copy()
         environment["PATH"] = f"{GAZEBO_BIN}{os.pathsep}{environment.get('PATH', '')}"
+        scripts = str(ROOT / "scripts")
+        environment["PYTHONPATH"] = os.pathsep.join(filter(None, (scripts, environment.get("PYTHONPATH"))))
         environment["GEM_HOME"] = str(prefix / "share/rubygems")
         environment["GZ_CONFIG_PATH"] = str(prefix / "share/gz")
         environment["OGRE2_RESOURCE_PATH"] = str(prefix / "lib/OGRE-Next")

@@ -10,17 +10,14 @@ import sys
 from threading import Event
 import time
 
-from gazebo_world import MODEL_NAME, WORLD_NAME
+from gazebo_world import MODEL_NAME, POSE_TOPIC, WORLD_NAME
 
 LOOPBACK = "127.0.0.1"
-POSE_SERVICE = f"/world/{WORLD_NAME}/set_pose"
 FDM_SIZE = 408
 FDM_VERSION = 24
 FDM_HEADER = struct.Struct(">I4x3d4f")
 EARTH_RADIUS_M = 6378137.0
 POSE_INTERVAL_S = 1 / 30
-RETRY_INTERVAL_S = 0.25
-REQUEST_TIMEOUT_MS = 200
 
 
 def parse_home(text):
@@ -85,21 +82,23 @@ def latest_state(source):
 
 
 def stream_poses(source, home):
-    from gz.msgs.boolean_pb2 import Boolean
     from gz.msgs.pose_pb2 import Pose
     from gz.transport import Node
 
     node = Node()
+    publisher = node.advertise(POSE_TOPIC, Pose)
+    if not publisher.valid():
+        raise RuntimeError(f"could not advertise {POSE_TOPIC}")
     rendered = Event()
     if not node.subscribe(Pose, "/gui/camera/pose", lambda _pose: rendered.set()):
         raise RuntimeError("could not subscribe to the Gazebo camera pose")
     reported_render = False
     pose = Pose(name=MODEL_NAME)
     source.setblocking(False)
-    next_attempt = 0.0
-    server_ready = None
+    next_publish = 0.0
+    reported_stream = False
     while True:
-        delay = next_attempt - time.monotonic()
+        delay = next_publish - time.monotonic()
         if delay > 0:
             time.sleep(delay)
         select.select([source], [], [])
@@ -113,16 +112,12 @@ def stream_poses(source, home):
         position, orientation = gazebo_pose(home, state)
         pose.position.x, pose.position.y, pose.position.z = position
         pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = orientation
-        attempted = time.monotonic()
-        success, response = node.request(POSE_SERVICE, pose, Pose, Boolean, REQUEST_TIMEOUT_MS)
-        ready = bool(success and response.data)
-        if ready != server_ready:
-            if ready:
-                print(f"Gazebo pose stream ready: {WORLD_NAME}/{MODEL_NAME}", flush=True)
-            else:
-                print(f"Gazebo pose service unavailable: {POSE_SERVICE}. Retrying.", file=sys.stderr, flush=True)
-            server_ready = ready
-        next_attempt = attempted + POSE_INTERVAL_S if ready else time.monotonic() + RETRY_INTERVAL_S
+        next_publish = time.monotonic() + POSE_INTERVAL_S
+        if not publisher.publish(pose):
+            raise RuntimeError(f"could not publish on {POSE_TOPIC}")
+        if not reported_stream and publisher.has_connections():
+            print(f"Gazebo pose stream ready: {WORLD_NAME}/{MODEL_NAME}", flush=True)
+            reported_stream = True
 
 
 def main():

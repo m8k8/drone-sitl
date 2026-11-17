@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 
 WORLD_NAME = "bd_sitl"
 MODEL_NAME = "prototype_bd"
+POSE_TOPIC = f"/world/{WORLD_NAME}/sitl_pose"
 
 _SCENE = f"""
 <sdf version="1.11">
@@ -62,6 +63,9 @@ _SCENE = f"""
       <static>true</static>
       <pose>0 0 0.1 0 0 {math.radians(97):.9f}</pose>
       <link name="airframe" />
+      <plugin filename="gz-sim-python-system-loader-system" name="gz::sim::systems::PythonSystemLoader">
+        <module_name>gazebo_pose_system</module_name>
+      </plugin>
     </model>
   </world>
 </sdf>
@@ -87,14 +91,30 @@ def _visual(link, name, pose, shape, dimensions, color, *, transparency=0.0):
         ET.SubElement(visual, "cast_shadows").text = "false"
 
 
-def _add_field(link):
+def _add_crop_rows(link):
+    # Gazebo uses east for x and north for y. Leave headlands at y=6 and y=30.
+    _visual(link, "cultivated_soil", (0, 18, 0.005, 0, 0, 0), "box",
+            {"size": "24 28 0.01"}, "0.35 0.24 0.16 1")
+    for row, east in enumerate(range(-10, 11, 2)):
+        _visual(link, f"furrow_{row}", (east, 18, 0.05, 0, 0, 0), "box",
+                {"size": "0.95 20 0.1"}, "0.44 0.31 0.20 1")
+        for plant, north in enumerate(range(8, 29, 2)):
+            color = "0.24 0.43 0.13 1" if (row + plant) % 2 else "0.32 0.51 0.17 1"
+            _visual(link, f"crop_{row}_{plant}", (east, north, 0.19, 0, 0, 0), "ellipsoid",
+                    {"radii": "0.33 0.75 0.16"}, color)
+
+
+def _add_field(link, *, field):
     _visual(link, "surface", (5, 5, -0.04, 0, 0, 0), "box", {"size": "120 120 0.08"},
             "0.32 0.38 0.35 1")
-    for offset in range(-15, 31, 5):
-        _visual(link, f"grid_e_{offset}", (offset, 7.5, 0.004, 0, 0, 0),
-                "box", {"size": "0.035 45 0.002"}, "0.40 0.47 0.44 1")
-        _visual(link, f"grid_n_{offset}", (7.5, offset, 0.004, 0, 0, 0),
-                "box", {"size": "45 0.035 0.002"}, "0.40 0.47 0.44 1")
+    if field:
+        _add_crop_rows(link)
+    else:
+        for offset in range(-15, 31, 5):
+            _visual(link, f"grid_e_{offset}", (offset, 7.5, 0.004, 0, 0, 0),
+                    "box", {"size": "0.035 45 0.002"}, "0.40 0.47 0.44 1")
+            _visual(link, f"grid_n_{offset}", (7.5, offset, 0.004, 0, 0, 0),
+                    "box", {"size": "45 0.035 0.002"}, "0.40 0.47 0.44 1")
     _visual(link, "launch_pad", (0, 0, 0.001, 0, 0, 0), "cylinder",
             {"radius": "1.05", "length": "0.006"}, "0.67 0.69 0.64 1")
 
@@ -137,12 +157,15 @@ def _add_airframe(link, model):
                     "cylinder", {"radius": "0.009", "length": "0.085"}, aluminum)
 
 
-def write_world(path: Path, model: dict) -> None:
+def write_world(path: Path, model: dict, *, field=False) -> None:
     """Write the standalone display-only world. SITL owns the drone pose."""
     scene = ET.fromstring(_SCENE)
     ground = scene.find("./world/model[@name='test_field']/link")
     airframe = scene.find(f"./world/model[@name='{MODEL_NAME}']/link")
-    _add_field(ground)
+    if field:
+        camera = scene.find("./world/gui/plugin[@name='3D View']/camera_pose")
+        camera.text = "-31 -25 34 0 0.592 0.911"
+    _add_field(ground, field=field)
     _add_airframe(airframe, model)
     ET.indent(scene)
     ET.ElementTree(scene).write(path, encoding="utf-8", xml_declaration=True)
